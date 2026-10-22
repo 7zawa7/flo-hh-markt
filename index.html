@@ -176,7 +176,7 @@ footer{font-size:.82rem;color:var(--muted);max-width:70ch;display:grid;gap:14px}
     </div>
     <div class="daytabs" id="daytabs" role="group" aria-label="Tag auswählen"></div>
     <div class="quiz">
-      <fieldset class="q"><legend>Wo startest du?</legend><div class="pills" data-key="start"></div></fieldset>
+      <fieldset class="q"><legend>In welchem Viertel wohnst du?</legend><div class="pills" data-key="start"></div></fieldset>
       <fieldset class="q"><legend>Wie kommst du rum?</legend><div class="pills" data-key="mode"></div></fieldset>
       <div class="q q-wide">
         <label class="qlabel" for="prep">Wie lange brauchst du morgens ca.?</label>
@@ -269,10 +269,18 @@ const RAW = [
  ["2026-12-05","schanze","08:00","16:00",1],["2026-12-12","schanze","08:00","16:00",1],["2026-12-19","schanze","08:00","16:00",1]
 ];
 const START = {
-  hbf:{name:"Hamburg Hbf",lat:53.5530,lng:10.0069,extra:0},
-  altona:{name:"Bahnhof Altona",lat:53.5520,lng:9.9350,extra:0},
-  barmbek:{name:"Barmbek",lat:53.5874,lng:10.0447,extra:0},
-  whv:{name:"Wilhelmshaven",lat:53.5530,lng:10.0069,extra:{auto:140,oepnv:185,rad:185}}
+  stpauli:{name:"St. Pauli",lat:53.5550,lng:9.9640},
+  altona:{name:"Altona",lat:53.5520,lng:9.9350},
+  ottensen:{name:"Ottensen",lat:53.5560,lng:9.9230},
+  eimsbuettel:{name:"Eimsbüttel",lat:53.5740,lng:9.9530},
+  eppendorf:{name:"Eppendorf",lat:53.5900,lng:9.9800},
+  winterhude:{name:"Winterhude",lat:53.5960,lng:10.0050},
+  barmbek:{name:"Barmbek",lat:53.5874,lng:10.0447},
+  stgeorg:{name:"St. Georg",lat:53.5550,lng:10.0110},
+  wandsbek:{name:"Wandsbek",lat:53.5720,lng:10.0730},
+  wilhelmsburg:{name:"Wilhelmsburg",lat:53.4990,lng:10.0060},
+  harburg:{name:"Harburg",lat:53.4600,lng:9.9830},
+  bergedorf:{name:"Bergedorf",lat:53.4890,lng:10.2070}
 };
 const toMin = s => { const [h,m]=s.split(":").map(Number); return h*60+m; };
 const fmt = m => { m=((Math.round(m)%1440)+1440)%1440; return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"); };
@@ -317,7 +325,7 @@ function plan(list, s){
   return best;
 }
 
-const state = {day:null, start:"hbf", mode:"oepnv", pace:1, goal:"early", prep:35, count:0};
+const state = {day:null, start:"stpauli", mode:"oepnv", pace:1, goal:"early", prep:35, count:0};
 try{ Object.assign(state, JSON.parse(localStorage.getItem("flohwecker")||"{}")); state.day=null; }catch(e){}
 function save(){ try{ const {day,...rest}=state; localStorage.setItem("flohwecker",JSON.stringify(rest)); }catch(e){} }
 
@@ -329,8 +337,8 @@ function upcoming(){ const t=todayIso(), nm=nowMin();
 function wakeFor(key){
   const s=state, b=plan(days[key], s); if(!b.visits.length) return null;
   const first=b.visits[0], st=START[s.start];
-  const extra = st.extra ? st.extra[s.mode] : 0;
-  const toFirst = extra + travel(st, first.m, s.mode);
+  const extra = 0;
+  const toFirst = travel(st, first.m, s.mode);
   const depart = first.arr - toFirst;
   return {b, toFirst, depart, wake: depart - s.prep, extra};
 }
@@ -352,7 +360,7 @@ function renderHero(){
     <span class="label">Nächster Flohmarkt · ${relDay(key)}</span>
     <h1>${dl.wd}, ${dl.short}</h1>
     <div class="hero-list">${chips}</div>
-    ${w && !(isToday && nm>w.wake) ? `<div class="wake"><span class="label">Wecker stellen auf</span><span class="big">${fmt(w.wake)}</span><span style="color:var(--muted)">Abfahrt ${fmt(w.depart)} ab ${START[state.start].name}, zuerst ${esc(w.b.visits[0].m.name)}</span></div>`
+    ${w && !(isToday && nm>w.wake) ? `<div class="wake"><span class="label">Wecker stellen auf</span><span class="big">${fmt(w.wake)}</span><span style="color:var(--muted)">Abfahrt ${fmt(w.depart)} in ${START[state.start].name}, zuerst ${esc(w.b.visits[0].m.name)}</span></div>`
       : `<div class="wake"><span class="label">Jetzt los</span><span style="color:var(--muted)">Der Plan unten zeigt, welche Märkte heute noch offen sind.</span></div>`}
   `;
 }
@@ -372,7 +380,7 @@ function renderPlan(){
   if(!w){ tl.innerHTML=`<li><span></span><span></span><div class="body">Mit diesen Einstellungen passt kein Markt rein.</div></li>`; sk.innerHTML=""; drawMap([]); return; }
   const rows=[];
   rows.push(`<li class="alarm"><span class="t">${fmt(w.wake)}</span><span class="dot"><i></i></span><div class="body"><strong>Wecker</strong><span>${state.prep} Min. zum Fertigmachen, Kaffee, Kleingeld einstecken</span></div></li>`);
-  rows.push(`<li><span class="t">${fmt(w.depart)}</span><span class="dot"><i></i></span><div class="body"><strong>Losfahren ab ${st.name}</strong><span>ca. ${w.toFirst} Min.${w.extra?` (davon ca. ${w.extra} Min. nach Hamburg)`:""}</span></div></li>`);
+  rows.push(`<li><span class="t">${fmt(w.depart)}</span><span class="dot"><i></i></span><div class="body"><strong>Losfahren in ${st.name}</strong><span>ca. ${w.toFirst} Min. bis zum ersten Markt</span></div></li>`);
   w.b.visits.forEach((v,i)=>{
     if(i>0) rows.push(`<li class="travel"><span class="t">${fmt(w.b.visits[i-1].leave)}</span><span class="dot"><i></i></span><div class="body">Weiter, ca. ${v.tr} Min. ${state.mode==="rad"?"mit dem Rad":state.mode==="auto"?"mit dem Auto":"mit Bus & Bahn"}</div></li>`);
     const early = v.arr<=v.m.open ? "pünktlich zur Öffnung" : `${v.arr-v.m.open} Min. nach Öffnung`;
@@ -384,7 +392,7 @@ function renderPlan(){
   const want = state.count ? Math.min(state.count, days[state.day].length) : days[state.day].length;
   sk.innerHTML = w.b.visits.length < want ? `<div class="skipped"><strong>Du wolltest ${want}, es passen nur ${w.b.visits.length}.</strong> Mit „Kurz drüberschauen“ oder dem Rad klappt es eventuell.</div>` : "";
   renderAvail(w);
-  drawMap(w.b.visits.map(v=>v.m), state.start==="whv"?null:st);
+  drawMap(w.b.visits.map(v=>v.m), st);
 }
 
 function drawMap(ms, start){
@@ -418,7 +426,7 @@ function renderDays(){
 }
 
 const Q = {
-  start:[["hbf","Hamburg Hbf"],["altona","Altona"],["barmbek","Barmbek"],["whv","Wilhelmshaven"]],
+  start:Object.entries(START).map(([k,v])=>[k,v.name]),
   mode:[["oepnv","Bus & Bahn"],["rad","Fahrrad"],["auto","Auto"]],
   pace:[[0.6,"Kurz drüberschauen"],[1,"Normal stöbern"],[1.4,"Jede Kiste durchwühlen"]],
   goal:[["early","Ja, ich will die Schnäppchen"],["relaxed","Nö, eine Stunde später reicht"]]
