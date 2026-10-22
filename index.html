@@ -64,7 +64,7 @@ button,select{font:inherit;color:inherit}
 .planner{display:grid;gap:18px}
 .controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
 .quiz{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px}
-.q{margin:0;padding:16px 16px 18px;border:1.5px solid var(--line);border-radius:10px;background:var(--paper);display:grid;gap:12px;min-width:0}
+.q{margin:0;align-content:start;padding:16px 16px 18px;border:1.5px solid var(--line);border-radius:10px;background:var(--paper);display:grid;gap:12px;min-width:0}
 .q-wide{grid-column:1/-1}
 .q legend,.qlabel{float:left;width:100%;padding:0;font-family:var(--font-display);font-size:1.15rem;line-height:1.2;text-wrap:balance}
 .q legend+*{clear:both}
@@ -84,7 +84,7 @@ button,select{font:inherit;color:inherit}
 .slider input{flex:1;min-width:0;accent-color:var(--sticker);height:28px;cursor:pointer}
 .slider output{flex:0 0 auto;min-width:5.5ch;text-align:right;font-weight:700;font-size:1.5rem}
 .range-ends{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:.8rem;color:var(--muted)}
-#prep-hint{color:var(--ink);font-weight:700;text-align:center}
+.range-ends span:nth-child(2){color:var(--ink);font-weight:700;text-align:center}
 .avail{list-style:none;margin:0;padding:0;display:grid;gap:6px}
 .avail li{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 10px;border-radius:8px;border:1.5px dashed var(--line);color:var(--muted);transition:all .2s}
 .avail li .num{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-family:var(--font-mono);font-weight:700;font-size:.85rem;border:1.5px solid var(--line)}
@@ -479,7 +479,8 @@ function renderAvail(w){
   const ul=document.getElementById("avail"); if(!ul||!state.day) return;
   const order=new Map((w?w.b.visits:[]).map((v,i)=>[v.m.id,{i,v}]));
   const want = state.count ? Math.min(state.count, days[state.day].length) : days[state.day].length;
-  ul.innerHTML=days[state.day].map(m=>{ const hit=order.get(m.id);
+  const rank=m=>order.has(m.id)?order.get(m.id).i:99;
+  ul.innerHTML=[...days[state.day]].sort((a,b)=>rank(a)-rank(b)).map(m=>{ const hit=order.get(m.id);
     const st = hit ? `an ${fmt(hit.v.arr)}` : (order.size>=want ? "nicht eingeplant" : "passt zeitlich nicht");
     return `<li class="${hit?"on":""}"><span class="num">${hit?hit.i+1:"–"}</span><span class="nm">${esc(m.name)}<small>${esc(m.area.split(" · ")[0])} · ${m.o}–${m.c}</small></span><span class="st mono">${st}</span></li>`; }).join("");
 }
