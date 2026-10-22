@@ -63,8 +63,33 @@ button,select{font:inherit;color:inherit}
 /* Planner */
 .planner{display:grid;gap:18px}
 .controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
-.ctl{display:grid;gap:4px}
-.ctl select{width:100%;padding:9px 10px;border:1.5px solid var(--line);border-radius:6px;background:var(--paper)}
+.quiz{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px}
+.q{margin:0;padding:16px 16px 18px;border:1.5px solid var(--line);border-radius:10px;background:var(--paper);display:grid;gap:12px;min-width:0}
+.q-wide{grid-column:1/-1}
+.q legend,.qlabel{float:left;width:100%;padding:0;font-family:var(--font-display);font-size:1.15rem;line-height:1.2;text-wrap:balance}
+.q legend+*{clear:both}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pill{position:relative;cursor:pointer}
+.pill input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.pill span{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border:1.5px solid var(--line);border-radius:999px;background:var(--bg);font-weight:700;font-size:.95rem;transition:background .15s,border-color .15s,transform .15s}
+.pill:hover span{border-color:var(--ink)}
+.pill input:checked+span{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.pill input:focus-visible+span{outline:3px solid var(--sticker);outline-offset:2px}
+.q-count .pill span{min-width:48px;justify-content:center;font-family:var(--font-mono);font-size:1.05rem}
+.q-count .pill.all span{font-family:var(--font-body);font-size:.95rem}
+.slider{display:flex;align-items:center;gap:14px}
+.slider input{flex:1;min-width:0;accent-color:var(--sticker);height:28px;cursor:pointer}
+.slider output{flex:0 0 auto;min-width:5.5ch;text-align:right;font-weight:700;font-size:1.5rem}
+.range-ends{display:flex;justify-content:space-between;gap:10px;font-size:.8rem;color:var(--muted)}
+#prep-hint{color:var(--ink);font-weight:700;text-align:center}
+.avail{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.avail li{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 10px;border-radius:8px;border:1.5px dashed var(--line);color:var(--muted);transition:all .2s}
+.avail li .num{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-family:var(--font-mono);font-weight:700;font-size:.85rem;border:1.5px solid var(--line)}
+.avail li.on{border-style:solid;border-color:var(--ink);color:var(--ink);background:var(--bg)}
+.avail li.on .num{background:var(--sticker);color:var(--sticker-ink);border-color:var(--ink)}
+.avail li .st{font-size:.8rem;text-align:right}
+.avail li .nm{min-width:0}
+.avail li .nm small{display:block;font-size:.8rem;color:var(--muted)}
 .daytabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
 .daytab{flex:0 0 auto;padding:8px 12px;border:1.5px solid var(--line);background:var(--paper);border-radius:6px;cursor:pointer;text-align:left;line-height:1.25}
 .daytab[aria-pressed="true"]{border-color:var(--ink);background:var(--tag);color:#1b2440}
@@ -150,37 +175,23 @@ footer{font-size:.82rem;color:var(--muted);max-width:70ch;display:grid;gap:14px}
       <h2>Wann aufstehen, wohin zuerst</h2>
     </div>
     <div class="daytabs" id="daytabs" role="group" aria-label="Tag auswählen"></div>
-    <div class="controls">
-      <label class="ctl"><span class="label">Start</span>
-        <select id="start">
-          <option value="hbf">Hamburg Hbf</option>
-          <option value="altona">Bahnhof Altona</option>
-          <option value="barmbek">Barmbek</option>
-          <option value="whv">Wilhelmshaven (Anreise)</option>
-        </select></label>
-      <label class="ctl"><span class="label">Unterwegs mit</span>
-        <select id="mode">
-          <option value="oepnv">Bus &amp; Bahn</option>
-          <option value="rad">Fahrrad</option>
-          <option value="auto">Auto</option>
-        </select></label>
-      <label class="ctl"><span class="label">Stöbern</span>
-        <select id="pace">
-          <option value="0.6">Schnell durch</option>
-          <option value="1" selected>Normal</option>
-          <option value="1.4">Gründlich</option>
-        </select></label>
-      <label class="ctl"><span class="label">Ziel</span>
-        <select id="goal">
-          <option value="early">Schnäppchen: zur Öffnung da</option>
-          <option value="relaxed">Entspannt: 1 Std. später</option>
-        </select></label>
-      <label class="ctl"><span class="label">Fertigmachen</span>
-        <select id="prep">
-          <option value="20">20 Min.</option>
-          <option value="35" selected>35 Min.</option>
-          <option value="50">50 Min.</option>
-        </select></label>
+    <div class="quiz">
+      <fieldset class="q"><legend>Wo startest du?</legend><div class="pills" data-key="start"></div></fieldset>
+      <fieldset class="q"><legend>Wie kommst du rum?</legend><div class="pills" data-key="mode"></div></fieldset>
+      <div class="q q-wide">
+        <label class="qlabel" for="prep">Wie lange brauchst du morgens ca.?</label>
+        <div class="slider">
+          <input type="range" id="prep" min="5" max="120" step="5" value="35">
+          <output id="prep-out" for="prep" class="mono">35 Min.</output>
+        </div>
+        <div class="range-ends"><span>5 Min.</span><span id="prep-hint"></span><span>2 Std.</span></div>
+      </div>
+      <fieldset class="q"><legend>Wie gründlich stöberst du?</legend><div class="pills" data-key="pace"></div></fieldset>
+      <fieldset class="q"><legend>Willst du schon zur Öffnung da sein?</legend><div class="pills" data-key="goal"></div></fieldset>
+      <fieldset class="q q-wide q-count"><legend id="count-legend">Auf wie viele Flohmärkte willst du?</legend>
+        <div class="pills" data-key="count"></div>
+        <ul class="avail" id="avail" aria-live="polite"></ul>
+      </fieldset>
     </div>
     <div class="plan">
       <div style="display:grid;gap:12px;min-width:0">
@@ -284,27 +295,29 @@ function perms(arr){ if(arr.length<=1) return [arr]; const out=[];
 
 function plan(list, s){
   const offset = s.goal==="relaxed"?60:0;
+  const max = s.count ? Math.min(s.count, list.length) : list.length;
   let best=null;
   for(const order of perms(list)){
-    let t=null, last=null, visits=[], skipped=[], late=0, moved=0;
+    let t=null, last=null, visits=[], skipped=[], late=0, moved=0, dwellSum=0, wait=0;
     for(const m of order){
+      if(visits.length>=max) continue;
       const dwell=Math.round(m.dwell*s.pace);
       let arr;
       if(t===null){ arr=m.open+offset; }
-      else { const tr=travel(last,m,s.mode); arr=Math.max(t+tr, m.open+offset*0); moved+=tr; }
+      else { const tr=travel(last,m,s.mode); arr=Math.max(t+tr, m.open+offset); wait+=arr-(t+tr); moved+=tr; }
       if(arr>m.close-30){ skipped.push(m); continue; }
       const leave=Math.min(arr+dwell, m.close);
       visits.push({m,arr,leave,tr: last?travel(last,m,s.mode):0});
       late+=Math.max(0,arr-m.open)*(m.dwell/60);
-      t=leave; last=m;
+      t=leave; last=m; dwellSum+=m.dwell;
     }
-    const score=visits.length*10000 - late - moved*0.5;
+    const score=visits.length*10000 + dwellSum*20 - late - moved*0.5 - wait*0.5;
     if(!best||score>best.score) best={score,visits,skipped};
   }
   return best;
 }
 
-const state = {day:null, start:"hbf", mode:"oepnv", pace:1, goal:"early", prep:35};
+const state = {day:null, start:"hbf", mode:"oepnv", pace:1, goal:"early", prep:35, count:0};
 try{ Object.assign(state, JSON.parse(localStorage.getItem("flohwecker")||"{}")); state.day=null; }catch(e){}
 function save(){ try{ const {day,...rest}=state; localStorage.setItem("flohwecker",JSON.stringify(rest)); }catch(e){} }
 
@@ -368,7 +381,9 @@ function renderPlan(){
   const last=w.b.visits[w.b.visits.length-1];
   rows.push(`<li><span class="t">${fmt(last.leave)}</span><span class="dot"><i></i></span><div class="body"><strong>Fertig</strong><span>${w.b.visits.length} Markt${w.b.visits.length>1?"e":""} geschafft</span></div></li>`);
   tl.innerHTML=rows.join("");
-  sk.innerHTML = w.b.skipped.length ? `<div class="skipped"><strong>Passt nicht mehr rein:</strong> ${w.b.skipped.map(m=>esc(m.name)).join(", ")}. Mit „Schnell durch“ oder dem Rad klappt es eventuell.</div>` : "";
+  const want = state.count ? Math.min(state.count, days[state.day].length) : days[state.day].length;
+  sk.innerHTML = w.b.visits.length < want ? `<div class="skipped"><strong>Du wolltest ${want}, es passen nur ${w.b.visits.length}.</strong> Mit „Kurz drüberschauen“ oder dem Rad klappt es eventuell.</div>` : "";
+  renderAvail(w);
   drawMap(w.b.visits.map(v=>v.m), state.start==="whv"?null:st);
 }
 
@@ -402,13 +417,46 @@ function renderDays(){
   el.querySelectorAll(".day").forEach(b=>b.onclick=()=>{ state.day=b.dataset.day; renderAll(); document.getElementById("plan-section").scrollIntoView({behavior:"smooth"}); });
 }
 
-function bind(){
-  const ids=["start","mode","pace","goal","prep"];
-  ids.forEach(id=>{ const el=document.getElementById(id); el.value=String(state[id]);
-    if(el.value!==String(state[id])) el.selectedIndex=0;
-    el.onchange=()=>{ state[id]= (id==="pace"||id==="prep")? Number(el.value) : el.value; save(); renderAll(); }; });
+const Q = {
+  start:[["hbf","Hamburg Hbf"],["altona","Altona"],["barmbek","Barmbek"],["whv","Wilhelmshaven"]],
+  mode:[["oepnv","Bus & Bahn"],["rad","Fahrrad"],["auto","Auto"]],
+  pace:[[0.6,"Kurz drüberschauen"],[1,"Normal stöbern"],[1.4,"Jede Kiste durchwühlen"]],
+  goal:[["early","Ja, ich will die Schnäppchen"],["relaxed","Nö, eine Stunde später reicht"]]
+};
+const NUM = new Set(["pace","count"]);
+function pills(key, opts, current){
+  const box=document.querySelector(`.pills[data-key="${key}"]`);
+  box.innerHTML=opts.map(([v,l,cls])=>`<label class="pill ${cls||""}"><input type="radio" name="${key}" id="${key}-${String(v).replace(".","_")}" value="${v}" ${String(v)===String(current)?"checked":""}><span>${l}</span></label>`).join("");
+  box.querySelectorAll("input").forEach(i=>i.onchange=()=>{ state[key]=NUM.has(key)?Number(i.value):i.value; save(); renderAll(); });
 }
-function renderAll(){ renderTabs(); renderHero(); renderPlan(); renderDays(); }
+function prepHint(m){ return m<=15?"Zähneputzen und los":m<=30?"Kaffee to go":m<=50?"Mit Kaffee am Tisch":m<=75?"Mit richtigem Frühstück":"Ganz in Ruhe"; }
+function bind(){
+  Object.keys(Q).forEach(k=>{ if(!Q[k].some(([v])=>String(v)===String(state[k]))) state[k]=Q[k][0][0]; pills(k,Q[k],state[k]); });
+  const r=document.getElementById("prep");
+  const sync=()=>{ document.getElementById("prep-out").textContent=state.prep+" Min."; document.getElementById("prep-hint").textContent=prepHint(state.prep); };
+  state.prep=Math.min(120,Math.max(5,Math.round(Number(state.prep)/5)*5||35)); r.value=state.prep; sync();
+  r.oninput=()=>{ state.prep=Number(r.value); sync(); renderHero(); renderPlan(); };
+  r.onchange=()=>save();
+}
+function renderCount(){
+  const fs=document.querySelector(".q-count");
+  if(!state.day){ fs.hidden=true; return; } fs.hidden=false;
+  const n=days[state.day].length, dl=dayLabel(state.day);
+  document.getElementById("count-legend").textContent = n>1 ? `Auf wie viele der ${n} Flohmärkte am ${dl.wd} willst du?` : `Am ${dl.wd} gibt es nur einen Flohmarkt`;
+  const eff = state.count ? Math.min(state.count,n) : n;
+  const opts=[]; for(let i=1;i<=n;i++) opts.push(i===n&&n>1?[i,`Alle ${n}`,"all"]:[i,String(i)]);
+  pills("count",opts,eff);
+  document.querySelector('.pills[data-key="count"]').hidden = n<2;
+}
+function renderAvail(w){
+  const ul=document.getElementById("avail"); if(!ul||!state.day) return;
+  const order=new Map((w?w.b.visits:[]).map((v,i)=>[v.m.id,{i,v}]));
+  const want = state.count ? Math.min(state.count, days[state.day].length) : days[state.day].length;
+  ul.innerHTML=days[state.day].map(m=>{ const hit=order.get(m.id);
+    const st = hit ? `an ${fmt(hit.v.arr)}` : (order.size>=want ? "nicht eingeplant" : "passt zeitlich nicht");
+    return `<li class="${hit?"on":""}"><span class="num">${hit?hit.i+1:"–"}</span><span class="nm">${esc(m.name)}<small>${esc(m.area.split(" · ")[0])} · ${m.o}–${m.c}</small></span><span class="st mono">${st}</span></li>`; }).join("");
+}
+function renderAll(){ renderTabs(); renderCount(); renderHero(); renderPlan(); renderDays(); }
 bind(); renderAll();
 setInterval(()=>{ renderHero(); }, 60000);
 </script>
