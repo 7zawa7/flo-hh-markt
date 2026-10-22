@@ -4,7 +4,9 @@ Jeder Flohmarkt in Hamburg, mit Weckzeit und Route. Die Seite zeigt immer den n�
 
 ## Lokal starten
 
-Du brauchst nur einen kleinen Webserver. Eine der beiden Varianten reicht:
+**Am Mac am einfachsten:** Doppelklick auf `start.command`. Die Seite öffnet sich dann unter <http://localhost:8080>. Beim ersten Mal fragt macOS eventuell nach: dann Rechtsklick auf die Datei → Öffnen.
+
+Alternativ brauchst nur einen kleinen Webserver. Eine der beiden Varianten reicht:
 
 **Mit Node.js**
 
