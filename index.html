@@ -75,6 +75,9 @@ button,select{font:inherit;color:inherit}
 .pill:hover span{border-color:var(--ink)}
 .pill input:checked+span{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .pill input:focus-visible+span{outline:3px solid var(--sticker);outline-offset:2px}
+.strip{flex-wrap:nowrap;overflow-x:auto;scroll-snap-type:x proximity;padding-bottom:6px;margin-inline:-4px;padding-inline:4px;-webkit-mask-image:linear-gradient(90deg,#000 92%,transparent);mask-image:linear-gradient(90deg,#000 92%,transparent)}
+.strip .pill{flex:0 0 auto;scroll-snap-align:start}
+.strip .pill:last-child{margin-right:28px}
 .q-count .pill span{min-width:48px;justify-content:center;font-family:var(--font-mono);font-size:1.05rem}
 .q-count .pill.all span{font-family:var(--font-body);font-size:.95rem}
 .slider{display:flex;align-items:center;gap:14px}
@@ -187,7 +190,14 @@ footer{font-size:.82rem;color:var(--muted);max-width:70ch;display:grid;gap:14px}
         <div class="range-ends"><span>5 Min.</span><span id="prep-hint"></span><span>2 Std.</span></div>
       </div>
       <fieldset class="q"><legend>Wie gründlich stöberst du?</legend><div class="pills" data-key="pace"></div></fieldset>
-      <fieldset class="q"><legend>Willst du schon zur Öffnung da sein?</legend><div class="pills" data-key="goal"></div></fieldset>
+      <div class="q q-wide">
+        <label class="qlabel" for="offset">Wann willst du am ersten Flohmarkt sein?</label>
+        <div class="slider">
+          <input type="range" id="offset" min="0" max="240" step="15" value="0">
+          <output id="offset-out" for="offset" class="mono">Zur Öffnung</output>
+        </div>
+        <div class="range-ends"><span>Zur Öffnung</span><span id="offset-hint"></span><span>4 Std. später</span></div>
+      </div>
       <fieldset class="q q-wide q-count"><legend id="count-legend">Auf wie viele Flohmärkte willst du?</legend>
         <div class="pills" data-key="count"></div>
         <ul class="avail" id="avail" aria-live="polite"></ul>
@@ -302,7 +312,7 @@ function perms(arr){ if(arr.length<=1) return [arr]; const out=[];
   arr.forEach((x,i)=>perms([...arr.slice(0,i),...arr.slice(i+1)]).forEach(p=>out.push([x,...p]))); return out; }
 
 function plan(list, s){
-  const offset = s.goal==="relaxed"?60:0;
+  const offset = Number(s.offset)||0;
   const max = s.count ? Math.min(s.count, list.length) : list.length;
   let best=null;
   for(const order of perms(list)){
@@ -312,9 +322,9 @@ function plan(list, s){
       const dwell=Math.round(m.dwell*s.pace);
       let arr;
       if(t===null){ arr=m.open+offset; }
-      else { const tr=travel(last,m,s.mode); arr=Math.max(t+tr, m.open+offset); wait+=arr-(t+tr); moved+=tr; }
-      if(arr>m.close-30){ skipped.push(m); continue; }
-      const leave=Math.min(arr+dwell, m.close);
+      else { const tr=travel(last,m,s.mode); arr=Math.max(t+tr, m.open); wait+=arr-(t+tr); moved+=tr; }
+      if(arr+dwell>m.close){ skipped.push(m); continue; }
+      const leave=arr+dwell;
       visits.push({m,arr,leave,tr: last?travel(last,m,s.mode):0});
       late+=Math.max(0,arr-m.open)*(m.dwell/60);
       t=leave; last=m; dwellSum+=m.dwell;
@@ -325,7 +335,7 @@ function plan(list, s){
   return best;
 }
 
-const state = {day:null, start:"stpauli", mode:"oepnv", pace:1, goal:"early", prep:35, count:0};
+const state = {day:null, start:"stpauli", mode:"oepnv", pace:1, offset:0, prep:35, count:0};
 try{ Object.assign(state, JSON.parse(localStorage.getItem("flohwecker")||"{}")); state.day=null; }catch(e){}
 function save(){ try{ const {day,...rest}=state; localStorage.setItem("flohwecker",JSON.stringify(rest)); }catch(e){} }
 
@@ -383,7 +393,7 @@ function renderPlan(){
   rows.push(`<li><span class="t">${fmt(w.depart)}</span><span class="dot"><i></i></span><div class="body"><strong>Losfahren in ${st.name}</strong><span>ca. ${w.toFirst} Min. bis zum ersten Markt</span></div></li>`);
   w.b.visits.forEach((v,i)=>{
     if(i>0) rows.push(`<li class="travel"><span class="t">${fmt(w.b.visits[i-1].leave)}</span><span class="dot"><i></i></span><div class="body">Weiter, ca. ${v.tr} Min. ${state.mode==="rad"?"mit dem Rad":state.mode==="auto"?"mit dem Auto":"mit Bus & Bahn"}</div></li>`);
-    const early = v.arr<=v.m.open ? "pünktlich zur Öffnung" : `${v.arr-v.m.open} Min. nach Öffnung`;
+    const early = v.arr<=v.m.open ? "pünktlich zur Öffnung" : `${v.arr-v.m.open} Min. nach Öffnung, ${v.m.close-v.leave} Min. Puffer bis Schluss`;
     rows.push(`<li class="market"><span class="t">${fmt(v.arr)}</span><span class="dot"><i></i></span><div class="body"><strong>${i+1}. <a href="${v.m.url}" target="_blank" rel="noopener">${esc(v.m.name)}</a></strong><span>${esc(v.m.area)} · offen ${v.m.o}–${v.m.c} · ${early} · bis ${fmt(v.leave)} stöbern${v.m.flag?' · <span class="flag">regelmäßig, nicht im Kalender</span>':""}</span></div></li>`);
   });
   const last=w.b.visits[w.b.visits.length-1];
@@ -397,7 +407,7 @@ function renderPlan(){
 
 function drawMap(ms, start){
   const svg=document.getElementById("map");
-  const pts=[...Object.values(P)];
+  const pts=[...Object.values(P), ...(start?[start]:[])];
   const lats=pts.map(p=>p.lat), lngs=pts.map(p=>p.lng);
   const minLa=Math.min(...lats,53.545)-0.006, maxLa=Math.max(...lats,53.59)+0.006, minLo=Math.min(...lngs)-0.012, maxLo=Math.max(...lngs)+0.012;
   const X=lng=>20+(lng-minLo)/(maxLo-minLo)*280, Y=lat=>220-(lat-minLa)/(maxLa-minLa)*200;
@@ -428,8 +438,7 @@ function renderDays(){
 const Q = {
   start:Object.entries(START).map(([k,v])=>[k,v.name]),
   mode:[["oepnv","Bus & Bahn"],["rad","Fahrrad"],["auto","Auto"]],
-  pace:[[0.6,"Kurz drüberschauen"],[1,"Normal stöbern"],[1.4,"Jede Kiste durchwühlen"]],
-  goal:[["early","Ja, ich will die Schnäppchen"],["relaxed","Nö, eine Stunde später reicht"]]
+  pace:[[0.6,"Kurz drüberschauen"],[1,"Normal stöbern"],[1.4,"Jede Kiste durchwühlen"]]
 };
 const NUM = new Set(["pace","count"]);
 function pills(key, opts, current){
@@ -437,14 +446,25 @@ function pills(key, opts, current){
   box.innerHTML=opts.map(([v,l,cls])=>`<label class="pill ${cls||""}"><input type="radio" name="${key}" id="${key}-${String(v).replace(".","_")}" value="${v}" ${String(v)===String(current)?"checked":""}><span>${l}</span></label>`).join("");
   box.querySelectorAll("input").forEach(i=>i.onchange=()=>{ state[key]=NUM.has(key)?Number(i.value):i.value; save(); renderAll(); });
 }
-function prepHint(m){ return m<=15?"Zähneputzen und los":m<=30?"Kaffee to go":m<=50?"Mit Kaffee am Tisch":m<=75?"Mit richtigem Frühstück":"Ganz in Ruhe"; }
+const SLIDERS = {
+  prep:{min:5,max:120,step:5,def:35,label:m=>m+" Min.",
+        hint:m=>m<=15?"Zähneputzen und los":m<=30?"Kaffee to go":m<=50?"Mit Kaffee am Tisch":m<=75?"Mit richtigem Frühstück":"Ganz in Ruhe"},
+  offset:{min:0,max:240,step:15,def:0,
+        label:m=>m===0?"Zur Öffnung":"+"+(m<60?m+" Min.":Math.floor(m/60)+(m%60?":"+String(m%60).padStart(2,"0"):"")+" Std."),
+        hint:m=>m===0?"Schnäppchenjagd, die besten Teile sind früh weg":m<=60?"Noch gute Auswahl":m<=120?"Ausgeschlafen":"Feilschen, wenn alle einpacken wollen"}
+};
 function bind(){
   Object.keys(Q).forEach(k=>{ if(!Q[k].some(([v])=>String(v)===String(state[k]))) state[k]=Q[k][0][0]; pills(k,Q[k],state[k]); });
-  const r=document.getElementById("prep");
-  const sync=()=>{ document.getElementById("prep-out").textContent=state.prep+" Min."; document.getElementById("prep-hint").textContent=prepHint(state.prep); };
-  state.prep=Math.min(120,Math.max(5,Math.round(Number(state.prep)/5)*5||35)); r.value=state.prep; sync();
-  r.oninput=()=>{ state.prep=Number(r.value); sync(); renderHero(); renderPlan(); };
-  r.onchange=()=>save();
+  const sel=document.querySelector('.strip input:checked'); if(sel) sel.closest(".pill").scrollIntoView({block:"nearest",inline:"center"});
+  Object.entries(SLIDERS).forEach(([id,c])=>{
+    const r=document.getElementById(id);
+    let v=Math.round((Number(state[id])-c.min)/c.step)*c.step+c.min;
+    if(!Number.isFinite(v)) v=c.def; state[id]=Math.min(c.max,Math.max(c.min,v)); r.value=state[id];
+    const sync=()=>{ document.getElementById(id+"-out").textContent=c.label(state[id]); document.getElementById(id+"-hint").textContent=c.hint(state[id]); };
+    sync();
+    r.oninput=()=>{ state[id]=Number(r.value); sync(); renderHero(); renderPlan(); };
+    r.onchange=()=>save();
+  });
 }
 function renderCount(){
   const fs=document.querySelector(".q-count");
