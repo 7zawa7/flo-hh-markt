@@ -83,7 +83,7 @@ button,select{font:inherit;color:inherit}
 .slider{display:flex;align-items:center;gap:14px}
 .slider input{flex:1;min-width:0;accent-color:var(--sticker);height:28px;cursor:pointer}
 .slider output{flex:0 0 auto;min-width:5.5ch;text-align:right;font-weight:700;font-size:1.5rem}
-.range-ends{display:flex;justify-content:space-between;gap:10px;font-size:.8rem;color:var(--muted)}
+.range-ends{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:.8rem;color:var(--muted)}
 #prep-hint{color:var(--ink);font-weight:700;text-align:center}
 .avail{list-style:none;margin:0;padding:0;display:grid;gap:6px}
 .avail li{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 10px;border-radius:8px;border:1.5px dashed var(--line);color:var(--muted);transition:all .2s}
@@ -179,24 +179,24 @@ footer{font-size:.82rem;color:var(--muted);max-width:70ch;display:grid;gap:14px}
     </div>
     <div class="daytabs" id="daytabs" role="group" aria-label="Tag auswählen"></div>
     <div class="quiz">
-      <fieldset class="q"><legend>In welchem Viertel wohnst du?</legend><div class="pills" data-key="start"></div></fieldset>
+      <fieldset class="q q-wide"><legend>In welchem Viertel wohnst du?</legend><div class="pills" data-key="start"></div></fieldset>
       <fieldset class="q"><legend>Wie kommst du rum?</legend><div class="pills" data-key="mode"></div></fieldset>
-      <div class="q q-wide">
+      <fieldset class="q"><legend>Wie gründlich stöberst du?</legend><div class="pills" data-key="pace"></div></fieldset>
+      <div class="q">
+        <label class="qlabel" for="wake">Wann kommst du frühestens aus dem Bett?</label>
+        <div class="slider">
+          <input type="range" id="wake" min="270" max="660" step="15" value="360">
+          <output id="wake-out" for="wake" class="mono">06:00</output>
+        </div>
+        <div class="range-ends"><span>04:30</span><span id="wake-hint"></span><span>11:00</span></div>
+      </div>
+      <div class="q">
         <label class="qlabel" for="prep">Wie lange brauchst du morgens ca.?</label>
         <div class="slider">
           <input type="range" id="prep" min="5" max="120" step="5" value="35">
           <output id="prep-out" for="prep" class="mono">35 Min.</output>
         </div>
         <div class="range-ends"><span>5 Min.</span><span id="prep-hint"></span><span>2 Std.</span></div>
-      </div>
-      <fieldset class="q"><legend>Wie gründlich stöberst du?</legend><div class="pills" data-key="pace"></div></fieldset>
-      <div class="q q-wide">
-        <label class="qlabel" for="offset">Wann willst du am ersten Flohmarkt sein?</label>
-        <div class="slider">
-          <input type="range" id="offset" min="0" max="240" step="15" value="0">
-          <output id="offset-out" for="offset" class="mono">Zur Öffnung</output>
-        </div>
-        <div class="range-ends"><span>Zur Öffnung</span><span id="offset-hint"></span><span>4 Std. später</span></div>
       </div>
       <fieldset class="q q-wide q-count"><legend id="count-legend">Auf wie viele Flohmärkte willst du?</legend>
         <div class="pills" data-key="count"></div>
@@ -312,7 +312,7 @@ function perms(arr){ if(arr.length<=1) return [arr]; const out=[];
   arr.forEach((x,i)=>perms([...arr.slice(0,i),...arr.slice(i+1)]).forEach(p=>out.push([x,...p]))); return out; }
 
 function plan(list, s){
-  const offset = Number(s.offset)||0;
+  const home = START[s.start] || Object.values(START)[0];
   const max = s.count ? Math.min(s.count, list.length) : list.length;
   let best=null;
   for(const order of perms(list)){
@@ -321,7 +321,7 @@ function plan(list, s){
       if(visits.length>=max) continue;
       const dwell=Math.round(m.dwell*s.pace);
       let arr;
-      if(t===null){ arr=m.open+offset; }
+      if(t===null){ arr=Math.max(m.open, s.wake + s.prep + travel(home,m,s.mode)); }
       else { const tr=travel(last,m,s.mode); arr=Math.max(t+tr, m.open); wait+=arr-(t+tr); moved+=tr; }
       if(arr+dwell>m.close){ skipped.push(m); continue; }
       const leave=arr+dwell;
@@ -335,7 +335,7 @@ function plan(list, s){
   return best;
 }
 
-const state = {day:null, start:"stpauli", mode:"oepnv", pace:1, offset:0, prep:35, count:0};
+const state = {day:null, start:"stpauli", mode:"oepnv", pace:1, wake:360, prep:35, count:0};
 try{ Object.assign(state, JSON.parse(localStorage.getItem("flohwecker")||"{}")); state.day=null; }catch(e){}
 function save(){ try{ const {day,...rest}=state; localStorage.setItem("flohwecker",JSON.stringify(rest)); }catch(e){} }
 
@@ -449,9 +449,8 @@ function pills(key, opts, current){
 const SLIDERS = {
   prep:{min:5,max:120,step:5,def:35,label:m=>m+" Min.",
         hint:m=>m<=15?"Zähneputzen und los":m<=30?"Kaffee to go":m<=50?"Mit Kaffee am Tisch":m<=75?"Mit richtigem Frühstück":"Ganz in Ruhe"},
-  offset:{min:0,max:240,step:15,def:0,
-        label:m=>m===0?"Zur Öffnung":"+"+(m<60?m+" Min.":Math.floor(m/60)+(m%60?":"+String(m%60).padStart(2,"0"):"")+" Std."),
-        hint:m=>m===0?"Schnäppchenjagd, die besten Teile sind früh weg":m<=60?"Noch gute Auswahl":m<=120?"Ausgeschlafen":"Feilschen, wenn alle einpacken wollen"}
+  wake:{min:270,max:660,step:15,def:360,label:m=>fmt(m)+" Uhr",
+        hint:m=>m<=300?"Hardcore-Schnäppchenjagd":m<=375?"Früher Vogel":m<=480?"Ganz normal":m<=570?"Ausgeschlafen":"Langschläfer"}
 };
 function bind(){
   Object.keys(Q).forEach(k=>{ if(!Q[k].some(([v])=>String(v)===String(state[k]))) state[k]=Q[k][0][0]; pills(k,Q[k],state[k]); });
