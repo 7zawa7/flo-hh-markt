@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>flo.hh.markt</title>
+<meta name="description" content="Jeder Flohmarkt in Hamburg, mit Weckzeit und Route.">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: ein Spaltenfluss – Sticker-Hero "Nächster Markt" → Tagesplan mit Wecker-Timeline + Routenskizze → Terminliste → Taktik-Tipps */
+:root{
+  --bg:#e9ecef;          /* Pappkarton-Grau, leicht blau */
+  --paper:#f8f9fb;
+  --ink:#1b2440;         /* Tinte */
+  --muted:#5a6380;
+  --line:#c9cfdb;
+  --sticker:#d90021;     /* Hamburg-Rot, Preisaufkleber */
+  --sticker-ink:#ffffff;
+  --hh:#d90021;          /* Kräne im Logo */
+  --water:#5b8fd6;       /* Elbe */
+  --tag:#ffd84d;         /* Gelber Preiszettel */
+  --good:#1f8a5b;
+  --warn:#b4570b;
+  --font-display:"Bagel Fat One", "Arial Black", Impact, sans-serif;
+  --font-body:"Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12162a;--paper:#1b2038;--ink:#eef0f7;--muted:#a3abc6;--line:#2f3656;
+  --sticker:#ff4258;--sticker-ink:#12162a;--hh:#ff4258;--water:#6fa3ec;--tag:#f2cf45;--good:#45c48b;--warn:#f0a050;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12162a;--paper:#1b2038;--ink:#eef0f7;--muted:#a3abc6;--line:#2f3656;
+  --sticker:#ff4258;--sticker-ink:#12162a;--hh:#ff4258;--water:#6fa3ec;--tag:#f2cf45;--good:#45c48b;--warn:#f0a050;color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.5}
+.wrap{max-width:880px;margin:0 auto;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:28px 56px;display:flex;flex-direction:column;gap:36px}
+h1,h2{font-family:var(--font-display);font-weight:400;text-wrap:balance;margin:0;letter-spacing:.01em}
+h2{font-size:1.6rem}
+.label{font-size:.75rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:700}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+a{color:inherit}
+button,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--sticker);outline-offset:2px}
+
+/* Hero */
+.hero{position:relative;background:var(--paper);border:2px solid var(--ink);border-radius:6px;padding:28px 24px 24px;display:grid;gap:14px}
+.hero h1{font-size:clamp(2rem,6vw,3.2rem);line-height:1.02}
+.sticker{position:absolute;top:-22px;right:18px;width:104px;height:104px;border-radius:50%;background:var(--sticker);color:var(--sticker-ink);display:grid;place-items:center;text-align:center;transform:rotate(9deg);font-family:var(--font-display);line-height:1;box-shadow:0 3px 0 var(--ink)}
+.sticker small{display:block;font-family:var(--font-body);font-weight:700;font-size:.68rem;letter-spacing:.08em;text-transform:uppercase}
+.sticker b{font-size:1.9rem;font-weight:400}
+.hero-meta{display:flex;flex-wrap:wrap;gap:8px 16px;color:var(--muted)}
+.hero-list{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:5px 10px;border:1.5px solid var(--ink);border-radius:999px;background:var(--bg);font-size:.92rem}
+.chip .mono{font-size:.82rem;color:var(--muted)}
+.live{background:var(--good);color:var(--paper);border-color:var(--good)}
+.hero .wake{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;padding-top:6px;border-top:1.5px dashed var(--line)}
+.hero .wake .big{font-family:var(--font-mono);font-weight:700;font-size:2.4rem;letter-spacing:-.02em}
+
+/* Planner */
+.planner{display:grid;gap:18px}
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.ctl{display:grid;gap:4px}
+.ctl select{width:100%;padding:9px 10px;border:1.5px solid var(--line);border-radius:6px;background:var(--paper)}
+.daytabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+.daytab{flex:0 0 auto;padding:8px 12px;border:1.5px solid var(--line);background:var(--paper);border-radius:6px;cursor:pointer;text-align:left;line-height:1.25}
+.daytab[aria-pressed="true"]{border-color:var(--ink);background:var(--tag);color:#1b2440}
+.daytab .n{font-size:.75rem;color:inherit;opacity:.75}
+.plan{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:680px){.plan{grid-template-columns:1fr}}
+.timeline{list-style:none;margin:0;padding:0;display:grid;gap:0}
+.timeline li{display:grid;grid-template-columns:64px 18px minmax(0,1fr);gap:10px;align-items:start}
+.timeline .t{font-family:var(--font-mono);font-weight:700;padding-top:2px;text-align:right;font-variant-numeric:tabular-nums}
+.timeline .dot{position:relative;width:18px;align-self:stretch}
+.timeline .dot::before{content:"";position:absolute;left:8px;top:0;bottom:0;width:2px;background:var(--line)}
+.timeline li:first-child .dot::before{top:10px}
+.timeline li:last-child .dot::before{bottom:calc(100% - 12px)}
+.timeline .dot i{position:absolute;left:3px;top:6px;width:12px;height:12px;border-radius:50%;background:var(--paper);border:2px solid var(--ink)}
+.timeline li.market .dot i{background:var(--sticker);border-color:var(--ink);width:14px;height:14px;left:2px}
+.timeline li.alarm .dot i{background:var(--tag)}
+.timeline .body{padding-bottom:16px;min-width:0}
+.timeline .body strong{display:block}
+.timeline .body span{color:var(--muted);font-size:.92rem}
+.timeline li.travel .body{font-size:.9rem;color:var(--muted)}
+.skipped{border-left:3px solid var(--warn);padding:8px 12px;background:var(--paper);font-size:.92rem}
+.mapbox{background:var(--paper);border:1.5px solid var(--line);border-radius:6px;padding:10px}
+.mapbox svg{display:block;width:100%;height:auto}
+.mapbox figcaption{font-size:.8rem;color:var(--muted);padding-top:6px}
+
+/* Termine */
+.days{display:grid;gap:10px}
+.day{display:grid;grid-template-columns:88px minmax(0,1fr);gap:14px;padding:12px 14px;background:var(--paper);border:1.5px solid var(--line);border-radius:6px;cursor:pointer;text-align:left;width:100%}
+.day:hover{border-color:var(--ink)}
+.day .d{font-family:var(--font-display);font-size:1.25rem;line-height:1.05}
+.day .d small{display:block;font-family:var(--font-body);font-size:.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.day ul{list-style:none;margin:0;padding:0;display:grid;gap:3px}
+.day li{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between}
+.day li .mono{color:var(--muted);font-size:.85rem}
+.flag{font-size:.75rem;color:var(--warn)}
+.multi{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;background:var(--sticker);color:var(--sticker-ink);font-size:.72rem;font-weight:700;vertical-align:middle}
+
+/* Tipps */
+.tips{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.tip{background:var(--paper);padding:14px 16px;border-top:4px solid var(--ink);border-radius:2px}
+.tip h3{margin:0 0 6px;font-size:1rem}
+.tip p{margin:0;color:var(--muted);font-size:.94rem;max-width:65ch}
+footer{font-size:.82rem;color:var(--muted);max-width:70ch;display:grid;gap:14px}
+/* Marke */
+.brand{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:6px 16px;padding-bottom:14px;border-bottom:2px solid var(--ink)}
+.logo{font-family:var(--font-display);font-size:clamp(2.2rem,8vw,3.4rem);line-height:1;color:var(--ink);text-decoration:none;white-space:nowrap;letter-spacing:-.01em}
+.logo .dot{color:var(--hh)}
+.logo .hh{height:.9em;width:auto;vertical-align:-.08em;color:var(--hh);overflow:visible;margin:0 .02em}
+.logo.small{font-size:1.6rem}
+.brand .claim{font-size:.9rem;color:var(--muted);max-width:30ch;text-align:right}
+@media (max-width:520px){.brand .claim{text-align:left}}
+@media (prefers-reduced-motion:no-preference){.sticker{transition:transform .3s}.hero:hover .sticker{transform:rotate(-4deg) scale(1.04)}}
+</style>
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="hh" viewBox="0 0 124 116">
+    <g id="crane" fill="none" stroke="currentColor" stroke-linejoin="round">
+      <path d="M16 104V14" stroke-width="13"/>
+      <path d="M16 50c0-12 6-18 16-18s16 6 16 18v54" stroke-width="13"/>
+      <path d="M1 14H60" stroke-width="6"/>
+      <path d="M1 14L16 2L60 14" stroke-width="2.2"/>
+      <path d="M53 17V32" stroke-width="2"/>
+      <g transform="rotate(-12 53 39)"><rect x="46" y="32" width="14" height="12" rx="2" fill="var(--tag)" stroke="currentColor" stroke-width="1.6"/><circle cx="53" cy="36" r="1.6" fill="currentColor" stroke="none"/></g>
+    </g>
+    <use href="#crane" transform="translate(62 0)"/>
+    <path d="M0 110q7.75-5 15.5 0t15.5 0t15.5 0t15.5 0t15.5 0t15.5 0t15.5 0t15.5 0" fill="none" stroke="var(--water)" stroke-width="3.5" stroke-linecap="round"/>
+  </symbol>
+</svg>
+<div class="wrap">
+  <header class="brand">
+    <a class="logo" href="#hero" aria-label="flo.hh.markt">flo<span class="dot">.</span><svg class="hh" viewBox="0 0 124 116" aria-hidden="true"><use href="#hh"/></svg><span class="dot">.</span>markt</a>
+    <span class="claim">Jeder Flohmarkt in Hamburg, mit Weckzeit und Route.</span>
+  </header>
+  <section class="hero" id="hero" aria-live="polite"></section>
+
+  <section class="planner" id="plan-section">
+    <div style="display:grid;gap:6px">
+      <span class="label">Tagesplan</span>
+      <h2>Wann aufstehen, wohin zuerst</h2>
+    </div>
+    <div class="daytabs" id="daytabs" role="group" aria-label="Tag auswählen"></div>
+    <div class="controls">
+      <label class="ctl"><span class="label">Start</span>
+        <select id="start">
+          <option value="hbf">Hamburg Hbf</option>
+          <option value="altona">Bahnhof Altona</option>
+          <option value="barmbek">Barmbek</option>
+          <option value="whv">Wilhelmshaven (Anreise)</option>
+        </select></label>
+      <label class="ctl"><span class="label">Unterwegs mit</span>
+        <select id="mode">
+          <option value="oepnv">Bus &amp; Bahn</option>
+          <option value="rad">Fahrrad</option>
+          <option value="auto">Auto</option>
+        </select></label>
+      <label class="ctl"><span class="label">Stöbern</span>
+        <select id="pace">
+          <option value="0.6">Schnell durch</option>
+          <option value="1" selected>Normal</option>
+          <option value="1.4">Gründlich</option>
+        </select></label>
+      <label class="ctl"><span class="label">Ziel</span>
+        <select id="goal">
+          <option value="early">Schnäppchen: zur Öffnung da</option>
+          <option value="relaxed">Entspannt: 1 Std. später</option>
+        </select></label>
+      <label class="ctl"><span class="label">Fertigmachen</span>
+        <select id="prep">
+          <option value="20">20 Min.</option>
+          <option value="35" selected>35 Min.</option>
+          <option value="50">50 Min.</option>
+        </select></label>
+    </div>
+    <div class="plan">
+      <div style="display:grid;gap:12px;min-width:0">
+        <ol class="timeline" id="timeline"></ol>
+        <div id="skipped"></div>
+      </div>
+      <figure class="mapbox" style="margin:0">
+        <svg id="map" viewBox="0 0 320 240" role="img" aria-label="Routenskizze"></svg>
+        <figcaption>Routenskizze, nicht maßstabsgetreu zu Straßen. Zahlen = Reihenfolge.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section style="display:grid;gap:14px">
+    <div style="display:grid;gap:6px">
+      <span class="label">Kommende Termine</span>
+      <h2>Alle Flohmärkte</h2>
+    </div>
+    <div class="days" id="days"></div>
+  </section>
+
+  <section style="display:grid;gap:14px">
+    <div style="display:grid;gap:6px">
+      <span class="label">Taktik</span>
+      <h2>So klapperst du mehrere ab</h2>
+    </div>
+    <div class="tips">
+      <div class="tip"><h3>Groß und früh zuerst</h3><p>Die Flohdoms öffnen um 7 Uhr, die Händler bauen schon vorher auf. Die besten Stücke gehen in der ersten Stunde weg. Fang dort an, wo am meisten Auswahl ist und am frühesten geöffnet wird.</p></div>
+      <div class="tip"><h3>Horn oder Bahrenfeld, nicht beides zur Öffnung</h3><p>Beide Flohdoms starten samstags gleichzeitig und liegen quer durch die Stadt. Nimm einen zur Öffnung, den zweiten später oder lass ihn weg und geh danach zur Flohschanze.</p></div>
+      <div class="tip"><h3>Späte Märkte ans Ende</h3><p>Lange Reihe, Gleishalle und Kreativmarkt 73 öffnen erst ab 11 oder 12 Uhr. Die sind perfekt als zweite oder dritte Station, wenn du morgens schon unterwegs warst.</p></div>
+      <div class="tip"><h3>Kurz vor Schluss feilschen</h3><p>Ab etwa 14 Uhr wollen viele nicht mehr einpacken. Dann gehen Preise runter. Auf der Flohschanze lohnt sich das laut Stadt auch nachmittags noch.</p></div>
+      <div class="tip"><h3>Ausrüstung</h3><p>Kleingeld und kleine Scheine, ein großer Beutel oder Rucksack, Powerbank, warme Schichten im Herbst. Bei Möbeln vorher klären, wie du sie nach Hause kriegst.</p></div>
+      <div class="tip"><h3>Wetter checken</h3><p>Open-Air-Märkte können bei Sturm oder Starkregen ausfallen. Schau morgens kurz auf die Seite des Veranstalters, bevor du losfährst.</p></div>
+    </div>
+  </section>
+
+  <footer>
+    <span class="logo small" aria-hidden="true">flo<span class="dot">.</span><svg class="hh" viewBox="0 0 124 116"><use href="#hh"/></svg><span class="dot">.</span>markt</span>
+    <span>Termine: hamburg.de Flohmarktkalender Oktober und November 2026, Stand 23.10.2026. Mit „regelmäßig“ markierte Termine stehen nicht im Kalender, die Flohschanze findet laut Stadt aber jeden Samstag statt, auch im Winter. Alle Angaben ohne Gewähr. Fahrzeiten sind grobe Schätzungen aus der Luftlinie, für genaue Verbindungen die hvv-App nutzen.</span>
+  </footer>
+</div>
+
+<script>
+const P = {
+  bahrenfeld:{name:"Flohdom Bahrenfelder Trabrennbahn",area:"Bahrenfeld",lat:53.5714,lng:9.8972,dwell:90,url:"https://www.hamburg.de/freizeit/maerkte-und-messen/flohmaerkte/flohdom-bahrenfelder-trabrennbahn-301424"},
+  horn:{name:"Flohdom Horner Rennbahn",area:"Horn",lat:53.5617,lng:10.0786,dwell:90,url:"https://www.hamburg.de/freizeit/maerkte-und-messen/flohmaerkte/flohdom-horner-rennbahn-301426"},
+  schanze:{name:"Flohschanze",area:"St. Pauli · U Feldstraße",lat:53.5577,lng:9.9690,dwell:75,url:"https://www.hamburg.de/freizeit/maerkte-und-messen/flohmaerkte/flohschanze-301400"},
+  langereihe:{name:"Flohmarkt Lange Reihe",area:"St. Georg",lat:53.5570,lng:10.0130,dwell:45,url:"https://www.marktlust.de/pages/lange-reihe-flohmarkt"},
+  elserauch:{name:"Flohmarkt Else-Rauch-Platz",area:"Eimsbüttel",lat:53.5700,lng:9.9560,dwell:45,url:"https://www.hamburg.de/freizeit/maerkte-und-messen/flohmaerkte/flohmarkt-else-rauch-platz-301438"},
+  nachtrmh:{name:"Nachtflohmarkt vor der Rindermarkthalle",area:"St. Pauli",lat:53.5583,lng:9.9675,dwell:60,url:"https://www.hamburg.de/freizeit/maerkte-und-messen/flohmaerkte/nachtflohmarkt-rindermarkthalle-975918"},
+  rmh:{name:"Flohmarkt an der Rindermarkthalle",area:"St. Pauli",lat:53.5583,lng:9.9675,dwell:60,url:"https://www.hamburg.de/freizeit/maerkte-und-messen/flohmaerkte/flohmarkt-rindermarkthalle-st-pauli-301402"},
+  basch:{name:"Flohmarkt Barmbek°Basch",area:"Barmbek",lat:53.5850,lng:10.0440,dwell:45,url:"https://www.hamburg.de/freizeit/maerkte-und-messen/flohmaerkte/flohmarkt-barmbek-basch-301434"},
+  spielzeug:{name:"Spielzeugflohmarkt Gleishalle",area:"Oberhafen",lat:53.5465,lng:10.0105,dwell:40,url:"https://www.marktlust.de/pages/spielzeugflohmarkt"},
+  gleishalle:{name:"Nachtflohmarkt Gleishalle Oberhafen",area:"HafenCity",lat:53.5465,lng:10.0105,dwell:60,url:"https://www.nachtflohmarkt-gleishalle.de/"},
+  kreativ73:{name:"Floh- und Kreativmarkt 73",area:"Schanze",lat:53.5625,lng:9.9620,dwell:40,url:"https://www.dreiundsiebzig.de/programm"}
+};
+// [Datum, Ort, öffnet, schließt, regelmäßig-Flag]
+const RAW = [
+ ["2026-10-24","bahrenfeld","07:00","15:00"],["2026-10-24","horn","07:00","15:00"],["2026-10-24","schanze","08:00","16:00"],["2026-10-24","langereihe","11:00","17:00"],
+ ["2026-10-25","elserauch","10:00","16:00"],
+ ["2026-10-28","bahrenfeld","09:00","15:00"],["2026-10-28","nachtrmh","18:00","22:00"],
+ ["2026-10-29","nachtrmh","18:00","22:00"],
+ ["2026-10-31","spielzeug","11:00","16:00"],["2026-10-31","schanze","08:00","16:00",1],
+ ["2026-11-01","rmh","09:00","16:00"],["2026-11-01","basch","10:00","15:00"],
+ ["2026-11-04","bahrenfeld","09:00","15:00"],
+ ["2026-11-07","bahrenfeld","07:00","15:00"],["2026-11-07","horn","07:00","15:00"],["2026-11-07","schanze","08:00","16:00"],
+ ["2026-11-11","bahrenfeld","09:00","15:00"],
+ ["2026-11-13","gleishalle","17:00","22:00"],
+ ["2026-11-14","bahrenfeld","07:00","15:00"],["2026-11-14","horn","07:00","15:00"],["2026-11-14","schanze","08:00","16:00"],["2026-11-14","gleishalle","17:00","22:00"],
+ ["2026-11-18","bahrenfeld","09:00","15:00"],
+ ["2026-11-21","bahrenfeld","07:00","15:00"],["2026-11-21","horn","07:00","15:00"],["2026-11-21","schanze","08:00","16:00"],["2026-11-21","spielzeug","11:00","16:00"],["2026-11-21","kreativ73","12:00","18:00"],
+ ["2026-11-25","bahrenfeld","09:00","15:00"],
+ ["2026-11-27","gleishalle","17:00","22:00"],
+ ["2026-11-28","bahrenfeld","07:00","15:00"],["2026-11-28","horn","07:00","15:00"],["2026-11-28","schanze","08:00","16:00"],["2026-11-28","gleishalle","17:00","22:00"],
+ ["2026-12-05","schanze","08:00","16:00",1],["2026-12-12","schanze","08:00","16:00",1],["2026-12-19","schanze","08:00","16:00",1]
+];
+const START = {
+  hbf:{name:"Hamburg Hbf",lat:53.5530,lng:10.0069,extra:0},
+  altona:{name:"Bahnhof Altona",lat:53.5520,lng:9.9350,extra:0},
+  barmbek:{name:"Barmbek",lat:53.5874,lng:10.0447,extra:0},
+  whv:{name:"Wilhelmshaven",lat:53.5530,lng:10.0069,extra:{auto:140,oepnv:185,rad:185}}
+};
+const toMin = s => { const [h,m]=s.split(":").map(Number); return h*60+m; };
+const fmt = m => { m=((Math.round(m)%1440)+1440)%1440; return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"); };
+const WD = ["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"];
+const MO = ["Jan.","Feb.","März","Apr.","Mai","Juni","Juli","Aug.","Sep.","Okt.","Nov.","Dez."];
+const dateObj = iso => { const [y,m,d]=iso.split("-").map(Number); return new Date(y,m-1,d); };
+
+const days = {};
+RAW.forEach(([d,id,o,c,f])=>{ (days[d] ||= []).push({id,...P[id],open:toMin(o),close:toMin(c),o,c,flag:!!f}); });
+const dayKeys = Object.keys(days).sort();
+dayKeys.forEach(k=>days[k].sort((a,b)=>a.open-b.open));
+
+function km(a,b){ const R=6371,r=Math.PI/180,dLa=(b.lat-a.lat)*r,dLo=(b.lng-a.lng)*r;
+  const x=Math.sin(dLa/2)**2+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(dLo/2)**2; return 2*R*Math.asin(Math.sqrt(x)); }
+function travel(a,b,mode){ const d=km(a,b); if(d<0.3) return 3;
+  if(mode==="rad") return Math.round(3+d*4.2); if(mode==="auto") return Math.round(10+d*2.4); return Math.round(10+d*3.1); }
+
+function perms(arr){ if(arr.length<=1) return [arr]; const out=[];
+  arr.forEach((x,i)=>perms([...arr.slice(0,i),...arr.slice(i+1)]).forEach(p=>out.push([x,...p]))); return out; }
+
+function plan(list, s){
+  const offset = s.goal==="relaxed"?60:0;
+  let best=null;
+  for(const order of perms(list)){
+    let t=null, last=null, visits=[], skipped=[], late=0, moved=0;
+    for(const m of order){
+      const dwell=Math.round(m.dwell*s.pace);
+      let arr;
+      if(t===null){ arr=m.open+offset; }
+      else { const tr=travel(last,m,s.mode); arr=Math.max(t+tr, m.open+offset*0); moved+=tr; }
+      if(arr>m.close-30){ skipped.push(m); continue; }
+      const leave=Math.min(arr+dwell, m.close);
+      visits.push({m,arr,leave,tr: last?travel(last,m,s.mode):0});
+      late+=Math.max(0,arr-m.open)*(m.dwell/60);
+      t=leave; last=m;
+    }
+    const score=visits.length*10000 - late - moved*0.5;
+    if(!best||score>best.score) best={score,visits,skipped};
+  }
+  return best;
+}
+
+const state = {day:null, start:"hbf", mode:"oepnv", pace:1, goal:"early", prep:35};
+try{ Object.assign(state, JSON.parse(localStorage.getItem("flohwecker")||"{}")); state.day=null; }catch(e){}
+function save(){ try{ const {day,...rest}=state; localStorage.setItem("flohwecker",JSON.stringify(rest)); }catch(e){} }
+
+function nowMin(){ const n=new Date(); return n.getHours()*60+n.getMinutes(); }
+function todayIso(){ const n=new Date(); return n.getFullYear()+"-"+String(n.getMonth()+1).padStart(2,"0")+"-"+String(n.getDate()).padStart(2,"0"); }
+function upcoming(){ const t=todayIso(), nm=nowMin();
+  return dayKeys.filter(k=> k>t || (k===t && days[k].some(m=>m.close>nm))); }
+
+function wakeFor(key){
+  const s=state, b=plan(days[key], s); if(!b.visits.length) return null;
+  const first=b.visits[0], st=START[s.start];
+  const extra = st.extra ? st.extra[s.mode] : 0;
+  const toFirst = extra + travel(st, first.m, s.mode);
+  const depart = first.arr - toFirst;
+  return {b, toFirst, depart, wake: depart - s.prep, extra};
+}
+function dayLabel(key){ const d=dateObj(key); return {wd:WD[d.getDay()], short:d.getDate()+". "+MO[d.getMonth()]}; }
+function relDay(key){ const t=dateObj(todayIso()), d=dateObj(key); const diff=Math.round((d-t)/864e5);
+  return diff===0?"heute":diff===1?"morgen":diff===2?"übermorgen":"in "+diff+" Tagen"; }
+const esc = s => s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function renderHero(){
+  const el=document.getElementById("hero"), up=upcoming();
+  if(!up.length){ el.innerHTML=`<span class="label">Nächster Flohmarkt</span><h1>Keine Termine mehr hinterlegt</h1><p>Die eingetragenen Termine reichen bis Dezember 2026. Frag Claude nach einem Update der Terminliste.</p>`; return; }
+  const key=up[0], list=days[key], dl=dayLabel(key), t=todayIso(), nm=nowMin();
+  const w=wakeFor(key);
+  const chips=list.map(m=>{ const live = key===t && nm>=m.open && nm<m.close;
+    return `<span class="chip ${live?"live":""}">${esc(m.name)} <span class="mono">${m.o}–${m.c}</span></span>`; }).join("");
+  const isToday = key===t;
+  el.innerHTML=`
+    <div class="sticker" aria-hidden="true"><div><small>${list.length>1?"Märkte":"Markt"}</small><b>${list.length}</b></div></div>
+    <span class="label">Nächster Flohmarkt · ${relDay(key)}</span>
+    <h1>${dl.wd}, ${dl.short}</h1>
+    <div class="hero-list">${chips}</div>
+    ${w && !(isToday && nm>w.wake) ? `<div class="wake"><span class="label">Wecker stellen auf</span><span class="big">${fmt(w.wake)}</span><span style="color:var(--muted)">Abfahrt ${fmt(w.depart)} ab ${START[state.start].name}, zuerst ${esc(w.b.visits[0].m.name)}</span></div>`
+      : `<div class="wake"><span class="label">Jetzt los</span><span style="color:var(--muted)">Der Plan unten zeigt, welche Märkte heute noch offen sind.</span></div>`}
+  `;
+}
+
+function renderTabs(){
+  const up=upcoming().slice(0,10), el=document.getElementById("daytabs");
+  if(!state.day || !up.includes(state.day)) state.day=up[0]||null;
+  el.innerHTML=up.map(k=>{ const dl=dayLabel(k);
+    return `<button class="daytab" data-day="${k}" aria-pressed="${k===state.day}">${dl.wd.slice(0,2)}, ${dl.short}<br><span class="n">${days[k].length} Markt${days[k].length>1?"e":""}</span></button>`; }).join("");
+  el.querySelectorAll("button").forEach(b=>b.onclick=()=>{state.day=b.dataset.day; renderAll();});
+}
+
+function renderPlan(){
+  const tl=document.getElementById("timeline"), sk=document.getElementById("skipped");
+  if(!state.day){ tl.innerHTML=""; sk.innerHTML=""; return; }
+  const w=wakeFor(state.day); const st=START[state.start];
+  if(!w){ tl.innerHTML=`<li><span></span><span></span><div class="body">Mit diesen Einstellungen passt kein Markt rein.</div></li>`; sk.innerHTML=""; drawMap([]); return; }
+  const rows=[];
+  rows.push(`<li class="alarm"><span class="t">${fmt(w.wake)}</span><span class="dot"><i></i></span><div class="body"><strong>Wecker</strong><span>${state.prep} Min. zum Fertigmachen, Kaffee, Kleingeld einstecken</span></div></li>`);
+  rows.push(`<li><span class="t">${fmt(w.depart)}</span><span class="dot"><i></i></span><div class="body"><strong>Losfahren ab ${st.name}</strong><span>ca. ${w.toFirst} Min.${w.extra?` (davon ca. ${w.extra} Min. nach Hamburg)`:""}</span></div></li>`);
+  w.b.visits.forEach((v,i)=>{
+    if(i>0) rows.push(`<li class="travel"><span class="t">${fmt(w.b.visits[i-1].leave)}</span><span class="dot"><i></i></span><div class="body">Weiter, ca. ${v.tr} Min. ${state.mode==="rad"?"mit dem Rad":state.mode==="auto"?"mit dem Auto":"mit Bus & Bahn"}</div></li>`);
+    const early = v.arr<=v.m.open ? "pünktlich zur Öffnung" : `${v.arr-v.m.open} Min. nach Öffnung`;
+    rows.push(`<li class="market"><span class="t">${fmt(v.arr)}</span><span class="dot"><i></i></span><div class="body"><strong>${i+1}. <a href="${v.m.url}" target="_blank" rel="noopener">${esc(v.m.name)}</a></strong><span>${esc(v.m.area)} · offen ${v.m.o}–${v.m.c} · ${early} · bis ${fmt(v.leave)} stöbern${v.m.flag?' · <span class="flag">regelmäßig, nicht im Kalender</span>':""}</span></div></li>`);
+  });
+  const last=w.b.visits[w.b.visits.length-1];
+  rows.push(`<li><span class="t">${fmt(last.leave)}</span><span class="dot"><i></i></span><div class="body"><strong>Fertig</strong><span>${w.b.visits.length} Markt${w.b.visits.length>1?"e":""} geschafft</span></div></li>`);
+  tl.innerHTML=rows.join("");
+  sk.innerHTML = w.b.skipped.length ? `<div class="skipped"><strong>Passt nicht mehr rein:</strong> ${w.b.skipped.map(m=>esc(m.name)).join(", ")}. Mit „Schnell durch“ oder dem Rad klappt es eventuell.</div>` : "";
+  drawMap(w.b.visits.map(v=>v.m), state.start==="whv"?null:st);
+}
+
+function drawMap(ms, start){
+  const svg=document.getElementById("map");
+  const pts=[...Object.values(P)];
+  const lats=pts.map(p=>p.lat), lngs=pts.map(p=>p.lng);
+  const minLa=Math.min(...lats,53.545)-0.006, maxLa=Math.max(...lats,53.59)+0.006, minLo=Math.min(...lngs)-0.012, maxLo=Math.max(...lngs)+0.012;
+  const X=lng=>20+(lng-minLo)/(maxLo-minLo)*280, Y=lat=>220-(lat-minLa)/(maxLa-minLa)*200;
+  let s=`<rect x="0" y="0" width="320" height="240" fill="var(--paper)"/>`;
+  // Elbe als Orientierung
+  s+=`<path d="M0 ${Y(53.540)} C 90 ${Y(53.543)}, 170 ${Y(53.539)}, 320 ${Y(53.532)}" stroke="var(--line)" stroke-width="10" fill="none" stroke-linecap="round"/>`;
+  s+=`<text x="300" y="${Y(53.532)+20}" text-anchor="end" font-size="9" fill="var(--muted)" font-family="Atkinson Hyperlegible, sans-serif">Elbe</text>`;
+  const seen=new Set();
+  Object.values(P).forEach(p=>{ const k=p.lat+","+p.lng; if(seen.has(k))return; seen.add(k);
+    s+=`<circle cx="${X(p.lng)}" cy="${Y(p.lat)}" r="3" fill="var(--line)"/>`; });
+  const route=[...(start?[start]:[]),...ms];
+  if(route.length>1) s+=`<polyline points="${route.map(p=>X(p.lng)+","+Y(p.lat)).join(" ")}" fill="none" stroke="var(--ink)" stroke-width="2" stroke-dasharray="5 4"/>`;
+  if(start) s+=`<rect x="${X(start.lng)-5}" y="${Y(start.lat)-5}" width="10" height="10" fill="var(--tag)" stroke="var(--ink)" stroke-width="1.5"/><text x="${X(start.lng)+8}" y="${Y(start.lat)+14}" font-size="9" fill="var(--muted)" font-family="Atkinson Hyperlegible, sans-serif">Start</text>`;
+  ms.forEach((m,i)=>{ const x=X(m.lng),y=Y(m.lat);
+    s+=`<circle cx="${x}" cy="${y}" r="11" fill="var(--sticker)" stroke="var(--ink)" stroke-width="1.5"/><text x="${x}" y="${y+4}" text-anchor="middle" font-size="11" font-weight="700" fill="var(--sticker-ink)" font-family="JetBrains Mono, monospace">${i+1}</text>`;
+    const right = x<200;
+    s+=`<text x="${right?x+15:x-15}" y="${y-8}" text-anchor="${right?"start":"end"}" font-size="9.5" fill="var(--ink)" font-family="Atkinson Hyperlegible, sans-serif">${esc(m.area.split(" · ")[0])}</text>`; });
+  svg.innerHTML=s;
+}
+
+function renderDays(){
+  const el=document.getElementById("days");
+  el.innerHTML=upcoming().map(k=>{ const dl=dayLabel(k), list=days[k];
+    return `<button class="day" data-day="${k}"><div class="d"><small>${dl.wd}</small>${dl.short}</div><div><ul>${list.map(m=>`<li><span>${esc(m.name)}${m.flag?' <span class="flag">regelmäßig</span>':""}</span><span class="mono">${m.o}–${m.c} · ${esc(m.area.split(" · ")[0])}</span></li>`).join("")}</ul>${list.length>1?'<span class="multi">'+list.length+' an einem Tag · Route planen</span>':""}</div></button>`; }).join("");
+  el.querySelectorAll(".day").forEach(b=>b.onclick=()=>{ state.day=b.dataset.day; renderAll(); document.getElementById("plan-section").scrollIntoView({behavior:"smooth"}); });
+}
+
+function bind(){
+  const ids=["start","mode","pace","goal","prep"];
+  ids.forEach(id=>{ const el=document.getElementById(id); el.value=String(state[id]);
+    if(el.value!==String(state[id])) el.selectedIndex=0;
+    el.onchange=()=>{ state[id]= (id==="pace"||id==="prep")? Number(el.value) : el.value; save(); renderAll(); }; });
+}
+function renderAll(){ renderTabs(); renderHero(); renderPlan(); renderDays(); }
+bind(); renderAll();
+setInterval(()=>{ renderHero(); }, 60000);
+</script>
+
+</body>
+</html>

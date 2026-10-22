@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<rect width="512" height="512" rx="96" fill="#d90021"/>
+<g transform="translate(76 92) scale(2.9)"><g id="crane" fill="none" stroke="#ffffff" stroke-linejoin="round">
+  <path d="M16 104V14" stroke-width="13"/>
+  <path d="M16 50c0-12 6-18 16-18s16 6 16 18v54" stroke-width="13"/>
+  <path d="M1 14H60" stroke-width="6"/>
+  <path d="M1 14L16 2L60 14" stroke-width="2.2"/>
+  <path d="M53 17V32" stroke-width="2"/>
+  <g transform="rotate(-12 53 39)"><rect x="46" y="32" width="14" height="12" rx="2" fill="#ffd84d" stroke="#ffffff" stroke-width="1.6"/><circle cx="53" cy="36" r="1.6" fill="#ffffff" stroke="none"/></g>
+</g>
+<use href="#crane" transform="translate(62 0)"/>
+<path d="M0 110q7.75-5 15.5 0t15.5 0t15.5 0t15.5 0t15.5 0t15.5 0t15.5 0t15.5 0" fill="none" stroke="#ffd84d" stroke-width="3.5" stroke-linecap="round"/>
+</g>
+</svg>

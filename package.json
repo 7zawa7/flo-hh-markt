@@ -1,0 +1,9 @@
+{
+  "name": "flo-hh-markt",
+  "version": "1.0.0",
+  "description": "Jeder Flohmarkt in Hamburg, mit Weckzeit und Route.",
+  "private": true,
+  "scripts": {
+    "start": "npx --yes serve@14.2.4 -l 8080 ."
+  }
+}
