@@ -66,6 +66,10 @@ button,select{font:inherit;color:inherit}
 .quiz{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px}
 .q{margin:0;align-content:start;padding:16px 16px 18px;border:1.5px solid var(--line);border-radius:10px;background:var(--paper);display:grid;gap:12px;min-width:0}
 .q-wide{grid-column:1/-1}
+.selectwrap{position:relative;max-width:420px}
+.selectwrap::after{content:"";position:absolute;right:16px;top:50%;width:9px;height:9px;border-right:2px solid var(--ink);border-bottom:2px solid var(--ink);transform:translateY(-70%) rotate(45deg);pointer-events:none}
+.selectwrap select{appearance:none;-webkit-appearance:none;width:100%;padding:11px 44px 11px 16px;border:1.5px solid var(--ink);border-radius:999px;background:var(--bg);color:var(--ink);font-weight:700;font-size:1rem;cursor:pointer}
+.selectwrap select:focus-visible{outline:3px solid var(--sticker);outline-offset:2px}
 .q legend,.qlabel{float:left;width:100%;padding:0;font-family:var(--font-display);font-size:1.15rem;line-height:1.2;text-wrap:balance}
 .q legend+*{clear:both}
 .pills{display:flex;flex-wrap:wrap;gap:8px}
@@ -196,6 +200,15 @@ footer{font-size:.82rem;color:var(--muted);max-width:70ch;display:grid;gap:14px}
 .brand .claim{display:grid;gap:2px;font-size:.9rem;color:var(--muted);text-align:right}
 .brand .claim strong{color:var(--ink);font-size:1rem}
 @media (max-width:520px){.brand .claim{text-align:left}}
+@media (max-width:600px){
+  .sticker{position:static;transform:none;width:auto;height:auto;border-radius:999px;padding:5px 12px;justify-self:start;box-shadow:none;order:-1}
+  .sticker div{display:flex;align-items:baseline;gap:6px}
+  .sticker small{font-size:.7rem}.sticker b{font-size:1.05rem}
+  .hero{padding:20px 18px}
+  .hero:hover .sticker{transform:none}
+  .avail li{grid-template-columns:20px 28px minmax(0,1fr) 26px!important;gap:8px!important;padding:8px!important}
+  .avail li .st{display:none}
+}
 @media (prefers-reduced-motion:no-preference){.sticker{transition:transform .3s}.hero:hover .sticker{transform:rotate(-4deg) scale(1.04)}}
 </style>
 <style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
@@ -231,7 +244,7 @@ footer{font-size:.82rem;color:var(--muted);max-width:70ch;display:grid;gap:14px}
     </div>
     <div class="daytabs" id="daytabs" role="group" aria-label="Tag auswählen"></div>
     <div class="quiz">
-      <fieldset class="q q-wide"><legend>In welchem Viertel wohnst du?</legend><div class="pills" data-key="start"></div></fieldset>
+      <div class="q q-wide"><label class="qlabel" for="start">In welchem Stadtteil wohnst du?</label><div class="selectwrap"><select id="start"></select></div></div>
       <fieldset class="q"><legend>Wie kommst du rum?</legend><div class="pills" data-key="mode"></div></fieldset>
       <fieldset class="q"><legend>Wie gründlich stöberst du?</legend><div class="pills" data-key="pace"></div></fieldset>
       <div class="q">
@@ -370,19 +383,111 @@ const RAW = [
  ["2026-12-05","schanze","08:00","16:00",1],["2026-12-12","schanze","08:00","16:00",1],["2026-12-19","schanze","08:00","16:00",1]
 ];
 const START = {
-  stpauli:{name:"St. Pauli",lat:53.5550,lng:9.9640},
-  altona:{name:"Altona",lat:53.5520,lng:9.9350},
-  ottensen:{name:"Ottensen",lat:53.5560,lng:9.9230},
-  eimsbuettel:{name:"Eimsbüttel",lat:53.5740,lng:9.9530},
-  eppendorf:{name:"Eppendorf",lat:53.5900,lng:9.9800},
-  winterhude:{name:"Winterhude",lat:53.5960,lng:10.0050},
-  barmbek:{name:"Barmbek",lat:53.5874,lng:10.0447},
-  stgeorg:{name:"St. Georg",lat:53.5550,lng:10.0110},
-  wandsbek:{name:"Wandsbek",lat:53.5720,lng:10.0730},
-  wilhelmsburg:{name:"Wilhelmsburg",lat:53.4990,lng:10.0060},
-  harburg:{name:"Harburg",lat:53.4600,lng:9.9830},
-  bergedorf:{name:"Bergedorf",lat:53.4890,lng:10.2070}
+  hamburgaltstadt:{name:"Hamburg-Altstadt",group:"Hamburg-Mitte",lat:53.5503,lng:9.9963},
+  hafencity:{name:"HafenCity",group:"Hamburg-Mitte",lat:53.5413,lng:9.996},
+  neustadt:{name:"Neustadt",group:"Hamburg-Mitte",lat:53.5517,lng:9.9817},
+  stpauli:{name:"St. Pauli",group:"Hamburg-Mitte",lat:53.555,lng:9.964},
+  stgeorg:{name:"St. Georg",group:"Hamburg-Mitte",lat:53.555,lng:10.011},
+  hammerbrook:{name:"Hammerbrook",group:"Hamburg-Mitte",lat:53.545,lng:10.03},
+  borgfelde:{name:"Borgfelde",group:"Hamburg-Mitte",lat:53.556,lng:10.035},
+  hamm:{name:"Hamm",group:"Hamburg-Mitte",lat:53.556,lng:10.057},
+  horn:{name:"Horn",group:"Hamburg-Mitte",lat:53.559,lng:10.085},
+  billstedt:{name:"Billstedt",group:"Hamburg-Mitte",lat:53.54,lng:10.12},
+  billbrook:{name:"Billbrook",group:"Hamburg-Mitte",lat:53.527,lng:10.08},
+  rothenburgsort:{name:"Rothenburgsort",group:"Hamburg-Mitte",lat:53.534,lng:10.04},
+  veddel:{name:"Veddel",group:"Hamburg-Mitte",lat:53.522,lng:10.02},
+  wilhelmsburg:{name:"Wilhelmsburg",group:"Hamburg-Mitte",lat:53.499,lng:10.006},
+  kleinergrasbrook:{name:"Kleiner Grasbrook",group:"Hamburg-Mitte",lat:53.53,lng:9.995},
+  steinwerder:{name:"Steinwerder",group:"Hamburg-Mitte",lat:53.537,lng:9.968},
+  waltershof:{name:"Waltershof",group:"Hamburg-Mitte",lat:53.53,lng:9.91},
+  finkenwerder:{name:"Finkenwerder",group:"Hamburg-Mitte",lat:53.537,lng:9.853},
+  altonaaltstadt:{name:"Altona-Altstadt",group:"Altona",lat:53.549,lng:9.95},
+  altonanord:{name:"Altona-Nord",group:"Altona",lat:53.56,lng:9.94},
+  sternschanze:{name:"Sternschanze",group:"Altona",lat:53.563,lng:9.966},
+  ottensen:{name:"Ottensen",group:"Altona",lat:53.556,lng:9.923},
+  bahrenfeld:{name:"Bahrenfeld",group:"Altona",lat:53.565,lng:9.905},
+  grossflottbek:{name:"Groß Flottbek",group:"Altona",lat:53.565,lng:9.872},
+  othmarschen:{name:"Othmarschen",group:"Altona",lat:53.553,lng:9.885},
+  lurup:{name:"Lurup",group:"Altona",lat:53.59,lng:9.88},
+  osdorf:{name:"Osdorf",group:"Altona",lat:53.57,lng:9.85},
+  nienstedten:{name:"Nienstedten",group:"Altona",lat:53.553,lng:9.845},
+  blankenese:{name:"Blankenese",group:"Altona",lat:53.564,lng:9.815},
+  iserbrook:{name:"Iserbrook",group:"Altona",lat:53.576,lng:9.825},
+  suelldorf:{name:"Sülldorf",group:"Altona",lat:53.58,lng:9.795},
+  rissen:{name:"Rissen",group:"Altona",lat:53.58,lng:9.76},
+  eimsbuettel:{name:"Eimsbüttel",group:"Eimsbüttel",lat:53.574,lng:9.953},
+  rotherbaum:{name:"Rotherbaum",group:"Eimsbüttel",lat:53.568,lng:9.99},
+  harvestehude:{name:"Harvestehude",group:"Eimsbüttel",lat:53.578,lng:9.988},
+  hoheluftwest:{name:"Hoheluft-West",group:"Eimsbüttel",lat:53.581,lng:9.97},
+  lokstedt:{name:"Lokstedt",group:"Eimsbüttel",lat:53.6,lng:9.955},
+  niendorf:{name:"Niendorf",group:"Eimsbüttel",lat:53.617,lng:9.95},
+  schnelsen:{name:"Schnelsen",group:"Eimsbüttel",lat:53.633,lng:9.92},
+  eidelstedt:{name:"Eidelstedt",group:"Eimsbüttel",lat:53.605,lng:9.905},
+  stellingen:{name:"Stellingen",group:"Eimsbüttel",lat:53.593,lng:9.93},
+  hoheluftost:{name:"Hoheluft-Ost",group:"Hamburg-Nord",lat:53.584,lng:9.98},
+  eppendorf:{name:"Eppendorf",group:"Hamburg-Nord",lat:53.59,lng:9.98},
+  grossborstel:{name:"Groß Borstel",group:"Hamburg-Nord",lat:53.61,lng:9.98},
+  alsterdorf:{name:"Alsterdorf",group:"Hamburg-Nord",lat:53.608,lng:10.005},
+  winterhude:{name:"Winterhude",group:"Hamburg-Nord",lat:53.596,lng:10.005},
+  uhlenhorst:{name:"Uhlenhorst",group:"Hamburg-Nord",lat:53.572,lng:10.02},
+  hohenfelde:{name:"Hohenfelde",group:"Hamburg-Nord",lat:53.562,lng:10.025},
+  barmbeksued:{name:"Barmbek-Süd",group:"Hamburg-Nord",lat:53.577,lng:10.04},
+  dulsberg:{name:"Dulsberg",group:"Hamburg-Nord",lat:53.58,lng:10.065},
+  barmbeknord:{name:"Barmbek-Nord",group:"Hamburg-Nord",lat:53.595,lng:10.043},
+  ohlsdorf:{name:"Ohlsdorf",group:"Hamburg-Nord",lat:53.625,lng:10.03},
+  fuhlsbuettel:{name:"Fuhlsbüttel",group:"Hamburg-Nord",lat:53.63,lng:10.01},
+  langenhorn:{name:"Langenhorn",group:"Hamburg-Nord",lat:53.66,lng:10.0},
+  eilbek:{name:"Eilbek",group:"Wandsbek",lat:53.568,lng:10.05},
+  wandsbek:{name:"Wandsbek",group:"Wandsbek",lat:53.572,lng:10.073},
+  marienthal:{name:"Marienthal",group:"Wandsbek",lat:53.565,lng:10.085},
+  jenfeld:{name:"Jenfeld",group:"Wandsbek",lat:53.575,lng:10.135},
+  tonndorf:{name:"Tonndorf",group:"Wandsbek",lat:53.585,lng:10.115},
+  farmsenberne:{name:"Farmsen-Berne",group:"Wandsbek",lat:53.605,lng:10.115},
+  bramfeld:{name:"Bramfeld",group:"Wandsbek",lat:53.615,lng:10.075},
+  steilshoop:{name:"Steilshoop",group:"Wandsbek",lat:53.611,lng:10.055},
+  wellingsbuettel:{name:"Wellingsbüttel",group:"Wandsbek",lat:53.64,lng:10.08},
+  sasel:{name:"Sasel",group:"Wandsbek",lat:53.655,lng:10.11},
+  poppenbuettel:{name:"Poppenbüttel",group:"Wandsbek",lat:53.66,lng:10.085},
+  hummelsbuettel:{name:"Hummelsbüttel",group:"Wandsbek",lat:53.645,lng:10.04},
+  lemsahlmellingstedt:{name:"Lemsahl-Mellingstedt",group:"Wandsbek",lat:53.69,lng:10.09},
+  duvenstedt:{name:"Duvenstedt",group:"Wandsbek",lat:53.705,lng:10.1},
+  wohldorfohlstedt:{name:"Wohldorf-Ohlstedt",group:"Wandsbek",lat:53.695,lng:10.135},
+  bergstedt:{name:"Bergstedt",group:"Wandsbek",lat:53.67,lng:10.125},
+  volksdorf:{name:"Volksdorf",group:"Wandsbek",lat:53.65,lng:10.16},
+  rahlstedt:{name:"Rahlstedt",group:"Wandsbek",lat:53.6,lng:10.155},
+  lohbruegge:{name:"Lohbrügge",group:"Bergedorf",lat:53.5,lng:10.19},
+  bergedorf:{name:"Bergedorf",group:"Bergedorf",lat:53.489,lng:10.207},
+  curslack:{name:"Curslack",group:"Bergedorf",lat:53.455,lng:10.23},
+  altengamme:{name:"Altengamme",group:"Bergedorf",lat:53.43,lng:10.29},
+  neuengamme:{name:"Neuengamme",group:"Bergedorf",lat:53.45,lng:10.22},
+  kirchwerder:{name:"Kirchwerder",group:"Bergedorf",lat:53.42,lng:10.2},
+  ochsenwerder:{name:"Ochsenwerder",group:"Bergedorf",lat:53.47,lng:10.1},
+  reitbrook:{name:"Reitbrook",group:"Bergedorf",lat:53.465,lng:10.15},
+  allermoehe:{name:"Allermöhe",group:"Bergedorf",lat:53.48,lng:10.15},
+  neuallermoehe:{name:"Neuallermöhe",group:"Bergedorf",lat:53.485,lng:10.16},
+  billwerder:{name:"Billwerder",group:"Bergedorf",lat:53.5,lng:10.12},
+  moorfleet:{name:"Moorfleet",group:"Bergedorf",lat:53.505,lng:10.09},
+  tatenberg:{name:"Tatenberg",group:"Bergedorf",lat:53.49,lng:10.08},
+  spadenland:{name:"Spadenland",group:"Bergedorf",lat:53.48,lng:10.06},
+  harburg:{name:"Harburg",group:"Harburg",lat:53.46,lng:9.983},
+  neuland:{name:"Neuland",group:"Harburg",lat:53.47,lng:10.01},
+  gutmoor:{name:"Gut Moor",group:"Harburg",lat:53.45,lng:10.02},
+  wilstorf:{name:"Wilstorf",group:"Harburg",lat:53.445,lng:9.99},
+  roenneburg:{name:"Rönneburg",group:"Harburg",lat:53.435,lng:10.0},
+  langenbek:{name:"Langenbek",group:"Harburg",lat:53.43,lng:9.99},
+  sinstorf:{name:"Sinstorf",group:"Harburg",lat:53.42,lng:9.98},
+  marmstorf:{name:"Marmstorf",group:"Harburg",lat:53.43,lng:9.96},
+  eissendorf:{name:"Eißendorf",group:"Harburg",lat:53.45,lng:9.95},
+  heimfeld:{name:"Heimfeld",group:"Harburg",lat:53.46,lng:9.95},
+  moorburg:{name:"Moorburg",group:"Harburg",lat:53.49,lng:9.94},
+  altenwerder:{name:"Altenwerder",group:"Harburg",lat:53.505,lng:9.92},
+  hausbruch:{name:"Hausbruch",group:"Harburg",lat:53.47,lng:9.88},
+  neugrabenfischbek:{name:"Neugraben-Fischbek",group:"Harburg",lat:53.475,lng:9.84},
+  francop:{name:"Francop",group:"Harburg",lat:53.5,lng:9.85},
+  neuenfelde:{name:"Neuenfelde",group:"Harburg",lat:53.515,lng:9.8},
+  cranz:{name:"Cranz",group:"Harburg",lat:53.537,lng:9.78}
 };
+const START_ALIAS = {altona:"altonaaltstadt", barmbek:"barmbeksued"};
 const toMin = s => { const [h,m]=s.split(":").map(Number); return h*60+m; };
 const fmt = m => { m=((Math.round(m)%1440)+1440)%1440; return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"); };
 const dur = m => { m=Math.max(0,Math.round(m)); return m<60 ? m+" Min." : Math.floor(m/60)+":"+String(m%60).padStart(2,"0")+" Std."; };
@@ -557,7 +662,6 @@ function renderDays(){
 }
 
 const Q = {
-  start:Object.entries(START).map(([k,v])=>[k,v.name]),
   mode:[["oepnv","Bus & Bahn"],["rad","Fahrrad"],["auto","Auto"]],
   pace:[[0.6,"Kurz drüberschauen"],[1,"Normal stöbern"],[1.4,"Jede Kiste durchwühlen"]]
 };
@@ -574,6 +678,13 @@ const SLIDERS = {
         hint:m=>m<=300?"Hardcore-Schnäppchenjagd":m<=375?"Früher Vogel":m<=480?"Ganz normal":m<=570?"Ausgeschlafen":"Langschläfer"}
 };
 function bind(){
+  const sel0=document.getElementById("start");
+  if(START_ALIAS[state.start]) state.start=START_ALIAS[state.start];
+  if(!START[state.start]) state.start="stpauli";
+  const groups={}; Object.entries(START).forEach(([k,v])=>(groups[v.group] ||= []).push([k,v.name]));
+  sel0.innerHTML=Object.entries(groups).map(([g,list])=>`<optgroup label="Bezirk ${g}">${list.sort((a,b)=>a[1].localeCompare(b[1],"de")).map(([k,n])=>`<option value="${k}">${n}</option>`).join("")}</optgroup>`).join("");
+  sel0.value=state.start;
+  sel0.onchange=()=>{ state.start=sel0.value; save(); renderAll(); };
   Object.keys(Q).forEach(k=>{ if(!Q[k].some(([v])=>String(v)===String(state[k]))) state[k]=Q[k][0][0]; pills(k,Q[k],state[k]); });
   const sel=document.querySelector('.strip input:checked'); if(sel) sel.closest(".pill").scrollIntoView({block:"nearest",inline:"center"});
   Object.entries(SLIDERS).forEach(([id,c])=>{
