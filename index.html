@@ -210,6 +210,10 @@ button,select{font:inherit;color:inherit}
 .timeline .body span{color:var(--muted);font-size:.92rem}
 .timeline li.travel .body{font-size:.9rem;color:var(--muted)}
 .skipped{border-left:3px solid var(--warn);padding:8px 12px;background:var(--paper);font-size:.92rem}
+.fitnote{display:grid;gap:6px;justify-items:start;margin-top:10px;padding:12px 14px;border-radius:10px;border:1.5px solid var(--warn);background:var(--paper);font-size:.92rem;color:var(--muted)}
+.fitnote strong{color:var(--ink);font-size:.98rem}
+.fitnote.hurry{border-color:var(--tag);background:color-mix(in srgb,var(--tag) 14%,var(--paper))}
+.fitnote ul{margin:0;padding-left:18px;display:grid;gap:4px}.fitnote ul b{color:var(--ink)}
 .mapbox{background:var(--paper);border:1.5px solid var(--line);border-radius:6px;padding:10px}
 .mapbox svg{display:block;width:100%;height:auto}
 .mapbox figcaption{font-size:.8rem;color:var(--muted);padding-top:6px}
@@ -323,6 +327,7 @@ footer .hello a{color:inherit;text-underline-offset:3px}
         <div class="pills" data-key="count"></div>
         <div class="avail-head"><span id="avail-hint">Zieh die Märkte in deine Wunsch-Reihenfolge. Oben fängst du an.</span><button type="button" id="auto-order" class="linkbtn" hidden>Beste Route vorschlagen</button></div>
         <ul class="avail" id="avail" aria-live="polite"></ul>
+        <div id="fitnote" aria-live="polite"></div>
       </fieldset>
     </div>
     <div class="wxday" id="wxday" hidden></div>
@@ -630,9 +635,10 @@ function plan(list, s, fixed, key){
   return best;
 }
 
-const state = {day:null, start:"stpauli", mode:"oepnv", pace:1, wake:360, prep:35, count:0, manual:{}};
+const state = {day:null, start:"stpauli", mode:"oepnv", pace:1, wake:360, prep:35, count:0, manual:{}, relax:{}};
 try{ Object.assign(state, JSON.parse(localStorage.getItem("flohwecker")||"{}")); state.day=null; }catch(e){}
 if(!state.manual||typeof state.manual!=="object") state.manual={};
+if(!state.relax||typeof state.relax!=="object") state.relax={};
 const manualFor = key => { const o=state.manual[key]; return Array.isArray(o)&&o.length===days[key].length&&days[key].every(m=>o.includes(m.id)) ? o : null; };
 function save(){ try{ const {day,...rest}=state; localStorage.setItem("flohwecker",JSON.stringify(rest)); }catch(e){} }
 
@@ -641,13 +647,26 @@ function todayIso(){ const n=new Date(); return n.getFullYear()+"-"+String(n.get
 function upcoming(){ const t=todayIso(), nm=nowMin();
   return dayKeys.filter(k=> k>t || (k===t && days[k].some(m=>m.close>nm))); }
 
+function wantFor(key){ const n=days[key].length; return state.count ? Math.min(state.count,n) : n; }
+const avgDwell=(visits,f)=>Math.round(visits.reduce((a,v)=>a+v.m.dwell*f,0)/visits.length/5)*5;
 function wakeFor(key){
-  const s=state, b=plan(days[key], s, manualFor(key), key); if(!b.visits.length) return null;
+  const s=state, list=days[key], want=wantFor(key), fixed=manualFor(key);
+  let b=plan(list, s, fixed, key), fit=null;
+  if(b.visits.length<want){
+    // Wie viel schneller müsste man stöbern, damit alle reinpassen?
+    let hb=null, hf=null;
+    for(let f=Math.round((s.pace-0.1)*10)/10; f>=0.4-1e-9; f=Math.round((f-0.1)*10)/10){
+      const b2=plan(list,{...s,pace:f},fixed,key); if(b2.visits.length>=want){ hb=b2; hf=f; break; }
+    }
+    fit={want, calm:b.visits.length, calmB:b, f:hf, relaxed:!!state.relax[key]||!hb};
+    if(hb && !state.relax[key]){ fit.hurryAvg=avgDwell(hb.visits,hf); fit.calmAvg=avgDwell(hb.visits,s.pace); b=hb; }
+  }
+  if(!b.visits.length) return null;
   const first=b.visits[0], st=START[s.start];
   const extra = 0;
   const toFirst = travel(st, first.m, s.mode);
   const depart = first.arr - toFirst;
-  return {b, toFirst, depart, wake: Math.floor((depart - s.prep)/5)*5, extra};
+  return {b, toFirst, depart, wake: Math.floor((depart - s.prep)/5)*5, extra, fit};
 }
 function dayLabel(key){ const d=dateObj(key); return {wd:WD[d.getDay()], short:d.getDate()+". "+MO[d.getMonth()]}; }
 function relDay(key){ const t=dateObj(todayIso()), d=dateObj(key); const diff=Math.round((d-t)/864e5);
@@ -705,7 +724,10 @@ function renderPlan(){
   rows.push(`<li><span class="t">${fmt(last.leave)}</span><span class="dot"><i></i></span><div class="body"><strong>Fertig</strong><span>${w.b.visits.length} Markt${w.b.visits.length>1?"e":""} geschafft</span></div></li>`);
   tl.innerHTML=rows.join("");
   const want = state.count ? Math.min(state.count, days[state.day].length) : days[state.day].length;
-  sk.innerHTML = w.b.visits.length < want ? `<div class="skipped"><strong>Du wolltest ${want}, es passen nur ${w.b.visits.length}.</strong> Mit „Kurz drüberschauen“ oder dem Rad klappt es eventuell.</div>` : "";
+  sk.innerHTML = w.b.visits.length < want ? `<div class="skipped"><strong>${w.b.visits.length} von ${want} Märkten passen rein.</strong> Warum, steht oben bei der Auswahl.</div>`
+    : w.fit ? `<div class="skipped"><strong>Etwas sputen:</strong> rund ${w.fit.hurryAvg} Min. pro Markt, damit alle ${want} reinpassen.</div>` : "";
+  const fn=document.getElementById("fitnote"); fn.innerHTML=fitNote(w,state.day);
+  fn.querySelectorAll("[data-relax]").forEach(b=>b.onclick=()=>{ if(b.dataset.relax==="1") state.relax[state.day]=1; else delete state.relax[state.day]; save(); renderHero(); renderPlan(); });
   renderAvail(w);
   drawMap(w.b.visits.map(v=>v.m), st);
 }
@@ -790,15 +812,37 @@ function renderAvail(w){
   const ul=document.getElementById("avail"); if(!ul||!state.day) return;
   const key=state.day, list=days[key], manual=manualFor(key);
   const order=new Map((w?w.b.visits:[]).map((v,i)=>[v.m.id,{i,v}]));
-  const want = state.count ? Math.min(state.count, list.length) : list.length;
+  const want = wantFor(key);
   let seq;
   if(manual) seq=manual.map(id=>list.find(m=>m.id===id));
   else { const rank=m=>order.has(m.id)?order.get(m.id).i:99; seq=[...list].sort((a,b)=>rank(a)-rank(b)); }
   document.getElementById("auto-order").hidden=!manual;
   document.getElementById("avail-hint").textContent = list.length<2 ? "" : manual ? "Deine Reihenfolge. Oben fängst du an." : "Beste Route. Zieh die Märkte, um selbst zu sortieren.";
   ul.innerHTML=seq.map((m,idx)=>{ const hit=order.get(m.id);
-    const st = hit ? `an ${fmt(hit.v.arr)}` : (order.size>=want ? "nicht eingeplant" : "passt zeitlich nicht");
+    const st = hit ? `an ${fmt(hit.v.arr)}` : (order.size>=want ? "nicht eingeplant" : "passt nicht rein");
     return `<li class="${hit?"on":""}" data-id="${m.id}"><span class="grip" aria-hidden="true">⋮⋮</span><span class="num">${hit?hit.i+1:"–"}</span><span class="nm">${esc(m.name)}<small>${esc(m.area.split(" · ")[0])} · ${m.o}–${m.c}</small>${infoHTML(m,key,hit)}</span><span class="st mono">${st}</span><span class="mv"><button type="button" data-dir="-1" aria-label="${esc(m.name)} nach oben" ${idx===0?"disabled":""}>▲</button><button type="button" data-dir="1" aria-label="${esc(m.name)} nach unten" ${idx===seq.length-1?"disabled":""}>▼</button></span></li>`; }).join("");
+}
+function missReason(m,visits){
+  if(!visits.length) return "";
+  const last=visits[visits.length-1], arr=Math.max(last.leave+travel(last.m,m,state.mode), m.open);
+  if(arr>=m.close) return `Schließt um ${m.c}. Nach deinen anderen Stationen wärst du erst nach Schluss da.`;
+  if(m.close-arr<30) return `Schließt um ${m.c}. Nach deinen anderen Stationen wärst du erst um ${fmt(arr)} da, das reicht nicht mehr zum Stöbern.`;
+  return `Passt zeitlich nicht zwischen die anderen Märkte.`;
+}
+const PACE_TXT={"0.6":"überall nur kurz drüberschaust","1":"überall normal stöberst","1.4":"überall jede Kiste durchwühlst"};
+function fitNote(w,key){
+  const f=w&&w.fit; if(!f) return "";
+  const n=days[key].length, all = f.want===n ? `An diesem Tag sind ${n} Märkte` : `Du willst auf ${f.want} Märkte`;
+  const how=PACE_TXT[String(state.pace)]||"so stöberst wie eingestellt";
+  if(f.f!=null && !f.relaxed) return `<div class="fitnote hurry"><strong>${all}, du musst dich etwas sputen, damit du alle erreichst.</strong>
+    <span>Wenn du ${how}, passen nur ${f.calm} rein. Der Plan rechnet deshalb mit rund ${f.hurryAvg} statt ${f.calmAvg} Min. pro Markt.</span>
+    <button type="button" class="linkbtn" data-relax="1">Lieber in Ruhe, dafür nur ${f.calm}</button></div>`;
+  const out=days[key].filter(m=>!w.b.visits.some(v=>v.m.id===m.id));
+  const why = f.want-w.b.visits.length>0 ? out.map(m=>`<li><b>${esc(m.name)}:</b> ${missReason(m,w.b.visits)}</li>`).join("") : "";
+  if(f.f!=null) return `<div class="fitnote"><strong>In Ruhe schaffst du ${w.b.visits.length} von ${f.want} Märkten.</strong>${why?`<ul>${why}</ul>`:""}
+    <button type="button" class="linkbtn" data-relax="0">Doch alle ${f.want}, ich sput mich</button></div>`;
+  return `<div class="fitnote"><strong>${all}, aber selbst mit Sputen passen nur ${w.b.visits.length} rein.</strong>${why?`<ul>${why}</ul>`:""}
+    <span>Früher aufstehen, das Rad nehmen oder einen anderen Start hilft eventuell.</span></div>`;
 }
 function reason(v,i,visits,key,manual){
   const m=v.m, info=MI[m.id]||{finds:5,crowd:5}, c=crowdAt(m,key,v.arr), lv=level(c)[1];
@@ -983,6 +1027,10 @@ function buildPDF(jsPDF){
   doc.setFont("helvetica","normal"); doc.setFontSize(10);
   doc.text(doc.splitTextToSize(`Abfahrt ${fmt(w.depart)} in ${st.name}, ca. ${dur(w.toFirst)} bis zum ersten Markt: ${w.b.visits[0].m.name}. Fertig um ${fmt(w.b.visits[w.b.visits.length-1].leave)}.`,CW-48),M+45,y+7);
   y+=24;
+  if(w.fit){ const f=w.fit;
+    const t = f.f!=null && !f.relaxed ? `Etwas sputen: An diesem Tag sind ${days[key].length} Märkte. Damit du alle ${f.want} schaffst, rechnet der Plan mit rund ${f.hurryAvg} statt ${f.calmAvg} Min. pro Markt.`
+      : `${w.b.visits.length} von ${f.want} Märkten passen rein. ` + days[key].filter(m=>!w.b.visits.some(v=>v.m.id===m.id)).map(m=>m.name+": "+missReason(m,w.b.visits)).join(" ");
+    write(t,{size:9.5,style:"bold",color:C.warn}); y+=3; }
 
   // Wetter
   const wd=WX[key], hw=HWX[key];
