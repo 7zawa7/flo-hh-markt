@@ -193,7 +193,8 @@ footer{font-size:.82rem;color:var(--muted);max-width:70ch;display:grid;gap:14px}
 .logo .dot{color:var(--hh)}
 .logo .hh{height:.9em;width:auto;vertical-align:-.08em;color:var(--hh);overflow:visible;margin:0 .02em}
 .logo.small{font-size:1.6rem}
-.brand .claim{font-size:.9rem;color:var(--muted);max-width:30ch;text-align:right}
+.brand .claim{display:grid;gap:2px;font-size:.9rem;color:var(--muted);text-align:right}
+.brand .claim strong{color:var(--ink);font-size:1rem}
 @media (max-width:520px){.brand .claim{text-align:left}}
 @media (prefers-reduced-motion:no-preference){.sticker{transition:transform .3s}.hero:hover .sticker{transform:rotate(-4deg) scale(1.04)}}
 </style>
@@ -219,7 +220,7 @@ footer{font-size:.82rem;color:var(--muted);max-width:70ch;display:grid;gap:14px}
 <div class="wrap">
   <header class="brand">
     <a class="logo" href="#hero" aria-label="flo.hh.markt">flo<span class="dot">.</span><svg class="hh" viewBox="0 0 124 116" aria-hidden="true"><use href="#hh"/></svg><span class="dot">.</span>markt</a>
-    <span class="claim">Alle Hamburger Flohmärkte. Und wann du am besten wohin fährst.</span>
+    <span class="claim"><strong>Alle Hamburger Flohmärkte.</strong><span>Und wann du am besten wohin fährst.</span></span>
   </header>
   <section class="hero" id="hero" aria-live="polite"></section>
 
