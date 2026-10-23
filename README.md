@@ -48,4 +48,4 @@ Die Orte (Name, Stadtteil, Koordinaten, Stöberzeit) stehen darüber im Objekt `
 
 ## Anmeldung (Supabase)
 
-Die Anmeldung „Ich bin dabei“ läuft über Supabase. Die Zugangsdaten stehen in `SUPA` in `index.html`. Solange sie leer sind, zeigt die Seite „Anmeldung startet bald“.
+Die Anmeldung „Ich bin dabei“ läuft über Supabase. Die Zugangsdaten stehen in `SUPA` in `index.html`. Projekt: `flo-hh-markt` in der Supabase-Organisation enzolutions. Die Tabelle `signups` ist nur über die Funktionen `flohm_toggle` und `flohm_counts` erreichbar.
