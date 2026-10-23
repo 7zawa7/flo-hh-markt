@@ -66,6 +66,24 @@ button,select{font:inherit;color:inherit}
 .quiz{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px}
 .q{margin:0;align-content:start;padding:16px 16px 18px;border:1.5px solid var(--line);border-radius:10px;background:var(--paper);display:grid;gap:12px;min-width:0}
 .q-wide{grid-column:1/-1}
+.settings{background:var(--paper);border:1.5px solid var(--line);border-radius:10px}
+.settings>summary{list-style:none;display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:14px 16px;cursor:pointer}
+.settings>summary::-webkit-details-marker{display:none}
+.set-l{font-family:var(--font-display);font-size:1.1rem}
+.set-sum{flex:1 1 260px;min-width:0;color:var(--muted);font-size:.9rem;order:3}
+.set-edit{order:2;margin-left:auto}
+.set-edit{font-weight:700;text-decoration:underline;text-underline-offset:3px;font-size:.9rem}
+.settings[open] .set-edit{visibility:hidden}
+.settings[open] .set-sum{display:none}
+.settings>.quiz{padding:0 14px 14px}
+.settings .q{background:var(--bg)}
+.more{margin-top:2px}
+.more>summary{cursor:pointer;font-size:.82rem;font-weight:700;color:var(--ink);width:max-content;list-style:none}
+.more>summary::-webkit-details-marker{display:none}
+.more>summary::before{content:"+ ";}
+.more[open]>summary::before{content:"– ";}
+.more>div{display:grid;gap:8px;padding-top:8px}
+.rowline{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px}
 .selectwrap{position:relative;max-width:420px}
 .selectwrap::after{content:"";position:absolute;right:16px;top:50%;width:9px;height:9px;border-right:2px solid var(--ink);border-bottom:2px solid var(--ink);transform:translateY(-70%) rotate(45deg);pointer-events:none}
 .selectwrap select{appearance:none;-webkit-appearance:none;width:100%;padding:11px 44px 11px 16px;border:1.5px solid var(--ink);border-radius:999px;background:var(--bg);color:var(--ink);font-weight:700;font-size:1rem;cursor:pointer}
@@ -243,7 +261,9 @@ footer{font-size:.82rem;color:var(--muted);max-width:70ch;display:grid;gap:14px}
       <h2>Wann aufstehen, wohin zuerst</h2>
     </div>
     <div class="daytabs" id="daytabs" role="group" aria-label="Tag auswählen"></div>
-    <div class="quiz">
+    <details class="settings" id="settings">
+      <summary><span class="set-l">Deine Angaben</span><span id="set-sum" class="set-sum"></span><span class="set-edit">ändern</span></summary>
+      <div class="quiz">
       <div class="q q-wide"><label class="qlabel" for="start">In welchem Stadtteil wohnst du?</label><div class="selectwrap"><select id="start"></select></div></div>
       <fieldset class="q"><legend>Wie kommst du rum?</legend><div class="pills" data-key="mode"></div></fieldset>
       <fieldset class="q"><legend>Wie gründlich stöberst du?</legend><div class="pills" data-key="pace"></div></fieldset>
@@ -263,6 +283,9 @@ footer{font-size:.82rem;color:var(--muted);max-width:70ch;display:grid;gap:14px}
         </div>
         <div class="range-ends"><span>5 Min.</span><span id="prep-hint"></span><span>2 Std.</span></div>
       </div>
+      </div>
+    </details>
+    <div class="quiz">
       <fieldset class="q q-wide q-count"><legend id="count-legend">Auf wie viele Flohmärkte willst du?</legend>
         <div class="pills" data-key="count"></div>
         <div class="avail-head"><span id="avail-hint">Zieh die Märkte in deine Wunsch-Reihenfolge. Oben fängst du an.</span><button type="button" id="auto-order" class="linkbtn" hidden>Beste Route vorschlagen</button></div>
@@ -693,7 +716,7 @@ function bind(){
     if(!Number.isFinite(v)) v=c.def; state[id]=Math.min(c.max,Math.max(c.min,v)); r.value=state[id];
     const sync=()=>{ document.getElementById(id+"-out").textContent=c.label(state[id]); document.getElementById(id+"-hint").textContent=c.hint(state[id]); };
     sync();
-    r.oninput=()=>{ state[id]=Number(r.value); sync(); renderHero(); renderPlan(); };
+    r.oninput=()=>{ state[id]=Number(r.value); sync(); renderSettingsSum(); renderHero(); renderPlan(); };
     r.onchange=()=>save();
   });
 }
@@ -743,13 +766,15 @@ function reason(v,i,visits,key,manual){
   let t=parts.join(". ").replace(/\. ([a-zäöü])/g,(x,c)=>". "+c.toUpperCase());
   return t+".";
 }
-function crowdHTML(m,key,arr){
+function crowdBar(m,key,arr){
+  const at = arr!=null ? crowdAt(m,key,arr) : Math.max(...[0.2,0.35,0.5].map(f=>crowdAt(m,key,m.open+(m.close-m.open)*f)));
+  const [,lab,lv]=level(at);
+  return `<span class="crowd-row lvl-${lv}"><span>Andrang${arr!=null?"":" (Spitze)"}</span><span class="bar" role="img" aria-label="Erwartete Auslastung ${Math.round(at*100)} Prozent, ${lab}"><b style="width:${Math.round(at*100)}%"></b></span><strong>${lab}</strong></span>`;
+}
+function crowdSpark(m,key,arr){
   const pts=[]; for(let t=m.open;t<m.close;t+=Math.max(30,Math.round((m.close-m.open)/10/15)*15)) pts.push(t);
   const nowIdx = arr!=null ? pts.findIndex((t,i)=>arr>=t && (i===pts.length-1||arr<pts[i+1])) : -1;
-  const at = arr!=null ? crowdAt(m,key,arr) : Math.max(...pts.map(t=>crowdAt(m,key,t)));
-  const [,lab,lv]=level(at);
-  return `<div class="crowd"><div class="crowd-row lvl-${lv}"><span>${arr!=null?"Bei Ankunft":"Höchster Andrang"}:</span><span class="bar" role="img" aria-label="Erwartete Auslastung ${Math.round(at*100)} Prozent, ${lab}"><b style="width:${Math.round(at*100)}%"></b></span><strong>${lab}</strong></div>
-  <div class="spark" aria-hidden="true">${pts.map((t,i)=>{const v=crowdAt(m,key,t);return `<span class="${i===nowIdx?"now":""}" style="height:${Math.round(15+v*85)}%" title="${fmt(t)}: ${level(v)[1]}"></span>`;}).join("")}</div>
+  return `<div class="crowd"><span>Andrang über den Tag${arr!=null?" (dunkel: deine Ankunft)":""}</span><div class="spark" aria-hidden="true">${pts.map((t,i)=>{const v=crowdAt(m,key,t);return `<span class="${i===nowIdx?"now":""}" style="height:${Math.round(15+v*85)}%" title="${fmt(t)}: ${level(v)[1]}"></span>`;}).join("")}</div>
   <div class="spark-axis"><span>${m.o}</span><span>${fmt(m.open+(m.close-m.open)/2)}</span><span>${m.c}</span></div></div>`;
 }
 function infoHTML(m,key,hit){
@@ -757,11 +782,14 @@ function infoHTML(m,key,hit){
   const mine=MY.has(m.id+"|"+key), n=COUNTS[m.id+"|"+key]||0;
   const dots=Array.from({length:10},(_,i)=>`<i class="${i<info.finds?"f":""}"></i>`).join("");
   return `<div class="info">
-    <div class="facts"><span>Fundchancen <span class="score" role="img" aria-label="${info.finds} von 10">${dots}</span> ${info.finds}/10</span><span>${info.roof>=1?"Halle":info.roof>0?"teils überdacht":"draußen"}</span><span>${info.tags.map(esc).join(" · ")}</span></div>
-    ${crowdHTML(m,key,hit?hit.v.arr:null)}
-    <div class="why">${esc(info.blurb)}</div>
-    <div class="join"><button type="button" data-join="${m.id}" aria-pressed="${mine}" ${SUPA.url?"":"disabled"}>${mine?"Du bist dabei":"Ich bin dabei"}</button><span>${SUPA.url ? (n? `${n} ${n===1?"Person":"Leute"} dabei` : "Noch niemand angemeldet") : "Anmeldung startet bald"}</span></div>
-    <div class="why-src">Quellen: ${info.src.map(k=>`<a href="${SRC[k].u}" target="_blank" rel="noopener">${esc(SRC[k].t)}</a>`).join(", ")}</div>
+    <div class="rowline"><span>Funde <span class="score" role="img" aria-label="${info.finds} von 10">${dots}</span></span>${crowdBar(m,key,hit?hit.v.arr:null)}</div>
+    <div class="join"><button type="button" data-join="${m.id}" aria-pressed="${mine}" ${SUPA.url?"":"disabled"}>${mine?"Du bist dabei":"Ich bin dabei"}</button><span>${SUPA.url ? (n? `${n} ${n===1?"Person":"Leute"} dabei` : "Noch niemand angemeldet") : "Anmelden geht auf 7zawa7.github.io/flo-hh-markt"}</span></div>
+    <details class="more"><summary>Mehr zum Markt</summary><div>
+      <div class="facts"><span>${info.roof>=1?"Halle":info.roof>0?"teils überdacht":"draußen"}</span><span>${info.tags.map(esc).join(" · ")}</span></div>
+      <div class="why">${esc(info.blurb)}</div>
+      ${crowdSpark(m,key,hit?hit.v.arr:null)}
+      <div class="why-src">Quellen: ${info.src.map(k=>`<a href="${SRC[k].u}" target="_blank" rel="noopener">${esc(SRC[k].t)}</a>`).join(", ")}</div>
+    </div></details>
   </div>`;
 }
 function setManual(ids){ state.manual[state.day]=ids; save(); renderHero(); renderPlan(); }
@@ -851,7 +879,13 @@ function renderWxDay(){
   const hint = w.rain>=60 ? (outdoor?" Regenjacke einpacken, nicht alle Märkte sind überdacht.":"") : w.tmax<6 ? " Warm anziehen, du stehst viel draußen." : w.rain<25&&w.tmax>=14 ? " Gutes Flohmarktwetter, es dürfte voller werden." : "";
   box.innerHTML=`<h3>Wetter am ${dl.wd}: ${Math.round(w.tmin)}° bis ${Math.round(w.tmax)}°, ${WXL[w.kind]}, Regenrisiko bis ${w.rain} %</h3><div class="wxstrip">${cols.join("")}</div><span class="wxlegend">Hell hinterlegt: Stunden, in denen ein Markt offen hat. Blaue Balken: Regenwahrscheinlichkeit.${hint}</span>`;
 }
-function renderAll(){ renderTabs(); renderCount(); renderHero(); renderWxDay(); renderPlan(); renderDays(); }
+function renderSettingsSum(){
+  const el=document.getElementById("set-sum"); if(!el) return;
+  const ml={oepnv:"Bus & Bahn",rad:"Fahrrad",auto:"Auto"}[state.mode], pl={"0.6":"kurz stöbern","1":"normal stöbern","1.4":"gründlich stöbern"}[String(state.pace)];
+  el.textContent=`${(START[state.start]||{}).name||""} · ${ml} · ${pl} · aufstehen ab ${fmt(state.wake)} · ${dur(state.prep)} fertigmachen`;
+}
+function renderAll(){ renderSettingsSum(); renderTabs(); renderCount(); renderHero(); renderWxDay(); renderPlan(); renderDays(); }
+(()=>{ let seen=false; try{ seen=!!localStorage.getItem("flohwecker"); }catch(e){} document.getElementById("settings").open=!seen; })();
 bind(); renderAll(); loadWeather(); loadCounts();
 setInterval(()=>{ renderHero(); }, 60000);
 setInterval(loadCounts, 120000);
