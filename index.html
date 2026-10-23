@@ -213,6 +213,18 @@ button,select{font:inherit;color:inherit}
 .fitnote{display:grid;gap:6px;justify-items:start;margin-top:10px;padding:12px 14px;border-radius:10px;border:1.5px solid var(--warn);background:var(--paper);font-size:.92rem;color:var(--muted)}
 .fitnote strong{color:var(--ink);font-size:.98rem}
 .fitnote.hurry{border-color:var(--tag);background:color-mix(in srgb,var(--tag) 14%,var(--paper))}
+.report{display:grid;gap:10px;padding:16px 18px;border:2px solid var(--ink);border-radius:14px;background:var(--tag);color:#1b2440}
+.report h2{margin:0;font-size:1.35rem}.report p{margin:0;font-size:.92rem}
+.report .label{color:#1b2440;opacity:.75}
+.report ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.report li{display:grid;gap:6px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.55)}
+.report li b{font-size:.95rem}
+.report .rrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.report select{font:inherit;font-size:.85rem;padding:4px 6px;border-radius:8px;border:1.5px solid #1b2440;background:#fff;color:#1b2440}
+.report button{font:inherit;font-weight:700;font-size:.82rem;padding:5px 11px;border-radius:999px;border:1.5px solid #1b2440;background:#fff;color:#1b2440;cursor:pointer}
+.report button:hover{background:#1b2440;color:#fff}
+.report .thx{font-weight:700}
+.crowd-row small.real{font-weight:400;color:var(--good,#1f8a5b)}
 .fitnote ul{margin:0;padding-left:18px;display:grid;gap:4px}.fitnote ul b{color:var(--ink)}
 .mapbox{background:var(--paper);border:1.5px solid var(--line);border-radius:6px;padding:10px}
 .mapbox svg{display:block;width:100%;height:auto}
@@ -291,6 +303,7 @@ footer .hello a{color:inherit;text-underline-offset:3px}
     <span class="claim"><strong>Alle Hamburger Flohmärkte.</strong><span>Und wann du am besten wohin fährst.</span></span>
   </header>
   <section class="hero" id="hero" aria-live="polite"></section>
+  <section class="report" id="report" hidden aria-live="polite"></section>
 
   <section class="planner" id="plan-section">
     <div style="display:grid;gap:6px">
@@ -382,7 +395,7 @@ footer .hello a{color:inherit;text-underline-offset:3px}
     <nav class="legal" aria-label="Rechtliches"><a href="impressum.html">Impressum</a><a href="datenschutz.html">Datenschutz</a><a href="impressum.html#ki">Hinweis zu KI</a></nav>
     <div class="fine">
       <p>Termine aus dem Flohmarktkalender von hamburg.de für Oktober und November 2026, Stand 23.10.2026. „Regelmäßig“ heißt: steht nicht im Kalender, findet laut Stadt aber jeden Samstag statt, auch im Winter. Alle Angaben ohne Gewähr.</p>
-      <p>Fahrzeiten sind grob aus der Luftlinie geschätzt, genaue Verbindungen zeigt die hvv-App. Fundchancen und Andrang schätzt die Seite aus öffentlichen Berichten, Bewertungen, Wetter und Anmeldungen. Posts auf Instagram und TikTok fließen nicht automatisch ein. Gebaut mit Unterstützung von KI.</p>
+      <p>Fahrzeiten sind grob aus der Luftlinie geschätzt, genaue Verbindungen zeigt die hvv-App. Fundchancen und Andrang schätzt die Seite aus öffentlichen Berichten, Bewertungen, Wetter und Anmeldungen. Sobald Besucher:innen melden, wie voll es war, zählen diese echten Rückmeldungen mit. Posts auf Instagram und TikTok fließen nicht automatisch ein. Gebaut mit Unterstützung von KI.</p>
       <p>Ein Projekt von enzolutions · Enzo Zawarty, Hamburg.</p>
     </div>
   </footer>
@@ -598,8 +611,21 @@ function crowdAt(m, key, t){
          if(w.tmax<5 && info.roof<1) wf*=0.85; if(w.tmax>=15 && w.rain<30 && info.roof<1) wf*=1.1; }
   const base=0.35+0.65*(info.crowd/10);
   const sf=Math.min(0.2,(COUNTS[m.id+"|"+key]||0)*0.015);
-  return clamp(base*dayF*curve*wf+sf,0,1);
+  const model=clamp(base*dayF*curve*wf+sf,0,1);
+  const o=obsAt(m.id,t); if(!o) return model;
+  // je mehr Rückmeldungen, desto mehr zählt das Beobachtete
+  const wt=Math.min(0.8,o.n/(o.n+3));
+  return clamp((1-wt)*model + wt*clamp(o.v*wf+sf,0,1),0,1);
 }
+// Rückmeldungen „Wie voll war's?“: market|hour -> {avg 1..4, n}
+const REP={};
+const LV_VAL=[0,0.25,0.47,0.67,0.88];
+function obsAt(id,t){
+  const h=Math.floor(t/60); let sum=0, n=0;
+  [[h,1],[h-1,0.5],[h+1,0.5]].forEach(([hh,f])=>{ const r=REP[id+"|"+hh]; if(r){ const a=r.avg, v=LV_VAL[Math.floor(a)]+(LV_VAL[Math.min(4,Math.floor(a)+1)]-LV_VAL[Math.floor(a)])*(a-Math.floor(a)); sum+=v*r.n*f; n+=r.n*f; } });
+  return n>=1 ? {v:sum/n, n:Math.round(n)} : null;
+}
+const repTotal=id=>Object.entries(REP).reduce((a,[k,r])=>k.startsWith(id+"|")?a+r.n:a,0);
 const LVL=[[0.35,"ruhig",1],[0.55,"entspannt",2],[0.75,"gut besucht",3],[2,"voll",4]];
 const level=v=>LVL.find(l=>v<l[0]);
 function visitValue(m,key,arr){
@@ -856,7 +882,9 @@ function reason(v,i,visits,key,manual){
     else if(m.open===earliest) parts.push("Zuerst hierhin, weil er am frühesten aufmacht");
     else parts.push("Liegt am besten auf deinem Weg");
   }
-  if(v.arr-m.open<=20 && peak>=0.6) parts.push(`Zur Öffnung noch ${lv}, später eher ${level(peak)[1]}`);
+  const ob=obsAt(m.id,v.arr);
+  if(ob && ob.n>=2) parts.push(`Laut ${ob.n} Besucher:innen ist es um die Uhrzeit eher ${level(clamp(ob.v,0,1))[1]}`);
+  else if(v.arr-m.open<=20 && peak>=0.6) parts.push(`Zur Öffnung noch ${lv}, später eher ${level(peak)[1]}`);
   else parts.push(`Wenn du ankommst, dürfte es ${lv} sein`);
   if(!manual && i>0 && m.open>=11*60 && m.open>visits[0].m.open) parts.push(`macht erst um ${m.o} auf und passt deshalb gut nach hinten`);
   if(!manual && i>0 && info.finds<bestFinds && m.open<11*60) parts.push("etwas weniger Auswahl als bei den anderen, deshalb später");
@@ -869,7 +897,7 @@ function reason(v,i,visits,key,manual){
 function crowdBar(m,key,arr){
   const at = arr!=null ? crowdAt(m,key,arr) : Math.max(...[0.2,0.35,0.5].map(f=>crowdAt(m,key,m.open+(m.close-m.open)*f)));
   const [,lab,lv]=level(at);
-  return `<span class="crowd-row lvl-${lv}"><span>Andrang${arr!=null?"":" (Spitze)"}</span><span class="bar" role="img" aria-label="Erwartete Auslastung ${Math.round(at*100)} Prozent, ${lab}"><b style="width:${Math.round(at*100)}%"></b></span><strong>${lab}</strong></span>`;
+  return `<span class="crowd-row lvl-${lv}"><span>Andrang${arr!=null?"":" (Spitze)"}${repTotal(m.id)?`<small class="real" title="Echte Rückmeldungen von Besucher:innen fließen ein"> · ${repTotal(m.id)} Rückm.</small>`:""}</span><span class="bar" role="img" aria-label="Erwartete Auslastung ${Math.round(at*100)} Prozent, ${lab}"><b style="width:${Math.round(at*100)}%"></b></span><strong>${lab}</strong></span>`;
 }
 function crowdSpark(m,key,arr){
   const pts=[]; for(let t=m.open;t<m.close;t+=Math.max(30,Math.round((m.close-m.open)/10/15)*15)) pts.push(t);
@@ -930,6 +958,35 @@ function getDevice(){ if(DEVICE) return DEVICE; try{ DEVICE=localStorage.getItem
 async function rpc(fn,body){
   const r=await fetch(`${SUPA.url}/rest/v1/rpc/${fn}`,{method:"POST",headers:{"apikey":SUPA.key,"Content-Type":"application/json"},body:JSON.stringify(body)});
   if(!r.ok) throw new Error(await r.text()); return r.json();
+}
+let MYREP={}; try{ MYREP=JSON.parse(localStorage.getItem("flohm-reported")||"{}")||{}; }catch(e){}
+const REP_LV=[[1,"ruhig"],[2,"entspannt"],[3,"gut besucht"],[4,"voll"]];
+function renderReport(){
+  const el=document.getElementById("report"); if(!el) return;
+  const t=todayIso(), nm=nowMin(), list=(days[t]||[]).filter(m=>nm>=m.open+30);
+  if(!SUPA.url || !list.length){ el.hidden=true; el.innerHTML=""; return; }
+  el.hidden=false;
+  el.innerHTML=`<span class="label">Warst du heute da?</span><h2>Wie voll war's?</h2>
+    <p>Ein Tipp reicht, anonym. So werden die Vorhersagen mit jedem Wochenende echter.</p>
+    <ul>${list.map(m=>{ const done=MYREP[m.id+"|"+t];
+      const h0=Math.floor(m.open/60), h1=Math.max(h0,Math.ceil(m.close/60)-1), hn=Math.min(h1,Math.max(h0,Math.floor(nm/60)));
+      const opts=[]; for(let h=h0;h<=h1;h++) opts.push(`<option value="${h}"${h===hn?" selected":""}>${String(h).padStart(2,"0")} Uhr</option>`);
+      return `<li data-rep="${m.id}"><b>${esc(m.name)}</b>${done?`<span class="thx">Danke! Du hast „${REP_LV[done-1][1]}“ gesagt.</span>`:
+        `<div class="rrow"><select aria-label="Wann warst du da?">${opts.join("")}</select>${REP_LV.map(([v,l])=>`<button type="button" data-lv="${v}">${l}</button>`).join("")}</div>`}</li>`; }).join("")}</ul>`;
+}
+document.getElementById("report").addEventListener("click",async e=>{
+  const b=e.target.closest("button[data-lv]"); if(!b) return;
+  const li=b.closest("li"), id=li.dataset.rep, hour=+li.querySelector("select").value, lv=+b.dataset.lv, t=todayIso();
+  li.querySelectorAll("button").forEach(x=>x.disabled=true);
+  try{ await rpc("flohm_report",{p_market:id,p_day:t,p_hour:hour,p_level:lv,p_device:getDevice()});
+       MYREP[id+"|"+t]=lv; try{ localStorage.setItem("flohm-reported",JSON.stringify(MYREP)); }catch(_){}
+       renderReport(); loadCrowd(); }
+  catch(_){ li.querySelectorAll("button").forEach(x=>x.disabled=false); b.closest(".rrow").insertAdjacentHTML("beforeend",'<span class="thx">Hat nicht geklappt, nochmal?</span>'); }
+});
+async function loadCrowd(){
+  if(!SUPA.url) return;
+  try{ const rows=await rpc("flohm_crowd",{}); Object.keys(REP).forEach(k=>delete REP[k]);
+       rows.forEach(r=>REP[r.market+"|"+r.hour]={avg:Number(r.avg_level),n:Number(r.n)}); renderHero(); renderPlan(); }catch(e){}
 }
 async function loadCounts(){
   if(!SUPA.url) return;
@@ -1183,10 +1240,10 @@ async function savePDF(f){
   };
 })();
 
-function renderAll(){ renderSettingsSum(); renderTabs(); renderCount(); renderHero(); renderWxDay(); renderPlan(); renderDays(); }
+function renderAll(){ renderReport(); renderSettingsSum(); renderTabs(); renderCount(); renderHero(); renderWxDay(); renderPlan(); renderDays(); }
 (()=>{ let seen=false; try{ seen=!!localStorage.getItem("flohwecker"); }catch(e){} document.getElementById("settings").open=!seen; })();
-bind(); renderAll(); loadWeather(); loadCounts();
-setInterval(()=>{ renderHero(); }, 60000);
+bind(); renderAll(); loadWeather(); loadCounts(); loadCrowd();
+setInterval(()=>{ renderHero(); renderReport(); }, 60000);
 setInterval(loadCounts, 120000);
 </script>
 

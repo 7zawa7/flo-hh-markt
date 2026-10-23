@@ -50,6 +50,8 @@ Die Orte (Name, Stadtteil, Koordinaten, Stöberzeit) stehen darüber im Objekt `
 
 Die Anmeldung „Ich bin dabei“ läuft über Supabase. Die Zugangsdaten stehen in `SUPA` in `index.html`. Projekt: `flo-hh-markt` in der Supabase-Organisation enzolutions. Die Tabelle `signups` ist nur über die Funktionen `flohm_toggle` und `flohm_counts` erreichbar.
 
+Dazu kommt „Wie voll war's?“: Am Markttag können Besucher:innen angeben, wie voll es war. Das landet in `flohm_reports` (nur über `flohm_report` und `flohm_crowd` erreichbar, SQL in `supabase/reports.sql`). Sobald Rückmeldungen da sind, fließen sie in `crowdAt` ein und ersetzen nach und nach die Schätzung. Neue Märkte müssen in `flohm_report` in die Liste der erlaubten IDs.
+
 ## Rechtliches und Datenschutz
 
 - `impressum.html`: Impressum (enzolutions · Enzo Zawarty) mit Hinweis zum KI-Einsatz (Art. 50 KI-VO)
