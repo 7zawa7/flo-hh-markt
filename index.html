@@ -66,6 +66,11 @@ button,select{font:inherit;color:inherit}
 .quiz{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px}
 .q{margin:0;align-content:start;padding:16px 16px 18px;border:1.5px solid var(--line);border-radius:10px;background:var(--paper);display:grid;gap:12px;min-width:0}
 .q-wide{grid-column:1/-1}
+.pdfbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px}
+.pdfbtn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:999px;border:0;background:var(--sticker);color:var(--sticker-ink);font-weight:700;font-size:1rem;cursor:pointer;box-shadow:0 3px 0 var(--ink)}
+.pdfbtn:hover{transform:translateY(-1px)}
+.pdfbtn:disabled{opacity:.6;cursor:progress}
+.pdfmsg{font-size:.9rem;color:var(--muted)}
 .settings{background:var(--paper);border:1.5px solid var(--line);border-radius:10px}
 .settings>summary{list-style:none;display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:14px 16px;cursor:pointer}
 .settings>summary::-webkit-details-marker{display:none}
@@ -293,6 +298,7 @@ footer{font-size:.82rem;color:var(--muted);max-width:70ch;display:grid;gap:14px}
       </fieldset>
     </div>
     <div class="wxday" id="wxday" hidden></div>
+    <div class="pdfbar" id="pdfbar"><button type="button" id="pdf-btn" class="pdfbtn"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Plan als PDF herunterladen</button><span id="pdf-msg" class="pdfmsg" aria-live="polite"></span></div>
     <div class="plan">
       <div style="display:grid;gap:12px;min-width:0">
         <ol class="timeline" id="timeline"></ol>
@@ -884,6 +890,166 @@ function renderSettingsSum(){
   const ml={oepnv:"Bus & Bahn",rad:"Fahrrad",auto:"Auto"}[state.mode], pl={"0.6":"kurz stöbern","1":"normal stöbern","1.4":"gründlich stöbern"}[String(state.pace)];
   el.textContent=`${(START[state.start]||{}).name||""} · ${ml} · ${pl} · aufstehen ab ${fmt(state.wake)} · ${dur(state.prep)} fertigmachen`;
 }
+// ---- PDF-Export (jsPDF, wird erst beim Klick geladen) ----
+const CAN_PDF = /github\.io$|^localhost$|^127\.0\.0\.1$/.test(location.hostname) || location.protocol==="file:";
+function loadJsPDF(){
+  if(window.jspdf) return Promise.resolve(window.jspdf.jsPDF);
+  return new Promise((res,rej)=>{ const sc=document.createElement("script");
+    sc.src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+    sc.onload=()=>res(window.jspdf.jsPDF); sc.onerror=()=>rej(new Error("load")); document.head.appendChild(sc); });
+}
+async function exportPDF(){
+  const key=state.day; if(!key) return;
+  const w=wakeFor(key); if(!w) return;
+  const jsPDF=await loadJsPDF();
+  const doc=new jsPDF({unit:"mm",format:"a4"});
+  const C={ink:[27,36,64],red:[217,0,33],muted:[90,99,128],line:[201,207,219],bg:[233,236,239],paper:[248,249,251],water:[91,143,214],good:[31,138,91],warn:[180,87,11],yel:[255,216,77]};
+  const LV={1:C.good,2:[201,162,39],3:C.warn,4:C.red};
+  const M=16, W=210, CW=W-2*M; let y=0;
+  const col=(c,f)=>{ doc[f||"setTextColor"](...c); };
+  const ensure=h=>{ if(y+h>282){ doc.addPage(); y=18; } };
+  const write=(txt,{size=10,style="normal",color=C.ink,x=M,width=CW,lh=1.35}={})=>{
+    doc.setFont("helvetica",style); doc.setFontSize(size); col(color);
+    const lines=doc.splitTextToSize(String(txt),width); const h=lines.length*size*0.3528*lh;
+    ensure(h); doc.text(lines,x,y+size*0.3528); y+=h; return h; };
+  const dl=dayLabel(key), year=key.slice(0,4), list=days[key], st=START[state.start];
+  const ml={oepnv:"Bus & Bahn",rad:"Fahrrad",auto:"Auto"}[state.mode];
+
+  // Kopf
+  col(C.ink,"setFillColor"); doc.rect(0,0,W,30,"F");
+  doc.setFont("helvetica","bold"); doc.setFontSize(24);
+  let x=M; [["flo",[255,255,255]],[".",[255,66,88]],["hh",[255,66,88]],[".",[255,66,88]],["markt",[255,255,255]]].forEach(([t,c])=>{ col(c); doc.text(t,x,17); x+=doc.getTextWidth(t); });
+  doc.setFont("helvetica","normal"); doc.setFontSize(9.5); col([200,205,220]);
+  doc.text("Alle Hamburger Flohmärkte. Und wann du am besten wohin fährst.",M,25);
+  y=40;
+  write(`Dein Plan für ${dl.wd}, ${dl.short} ${year}`,{size:17,style:"bold"});
+  y+=1;
+  write(`Start: ${st.name} · ${ml} · aufstehen ab ${fmt(state.wake)} · ${dur(state.prep)} fertigmachen · ${w.b.visits.length} von ${list.length} Märkten`,{size:9.5,color:C.muted});
+  y+=4;
+  // Weckbox
+  ensure(20); col(C.yel,"setFillColor"); doc.roundedRect(M,y,CW,18,2,2,"F");
+  doc.setFont("helvetica","bold"); doc.setFontSize(9); col(C.ink); doc.text("WECKER STELLEN AUF",M+5,y+7);
+  doc.setFontSize(20); doc.text(fmt(w.wake),M+5,y+15);
+  doc.setFont("helvetica","normal"); doc.setFontSize(10);
+  doc.text(doc.splitTextToSize(`Abfahrt ${fmt(w.depart)} in ${st.name}, ca. ${dur(w.toFirst)} bis zum ersten Markt: ${w.b.visits[0].m.name}. Fertig um ${fmt(w.b.visits[w.b.visits.length-1].leave)}.`,CW-48),M+45,y+7);
+  y+=24;
+
+  // Wetter
+  const wd=WX[key], hw=HWX[key];
+  write("Wetter",{size:13,style:"bold"}); y+=1;
+  if(wd&&hw){
+    write(`${Math.round(wd.tmin)}° bis ${Math.round(wd.tmax)}°, ${WXL[wd.kind]}, Regenrisiko bis ${wd.rain} %`,{size:10});
+    const from=Math.max(0,Math.floor(Math.min(...list.map(m=>m.open))/60)-1), to=Math.min(23,Math.ceil(Math.max(...list.map(m=>m.close))/60));
+    const hrs=[]; for(let i=from;i<=to;i++) if(hw[i]) hrs.push(i);
+    const cw=Math.min(14,CW/hrs.length); ensure(30); y+=2;
+    hrs.forEach((h,i)=>{ const x0=M+i*cw, d=hw[h], open=list.some(m=>h*60>=m.open&&h*60<m.close);
+      if(open){ col(C.bg,"setFillColor"); doc.rect(x0,y,cw-0.8,27,"F"); }
+      doc.setFontSize(7.5); doc.setFont("helvetica","normal"); col(C.muted); doc.text(String(h).padStart(2,"0"),x0+cw/2-0.4,y+4,{align:"center"});
+      doc.setFont("helvetica","bold"); doc.setFontSize(8.5); col(C.ink); doc.text(Math.round(d.t)+"°",x0+cw/2-0.4,y+9,{align:"center"});
+      col(C.line,"setFillColor"); doc.rect(x0+cw/2-1.6,y+11,2.4,10,"F");
+      col(C.water,"setFillColor"); const rh=10*d.rain/100; if(rh>0) doc.rect(x0+cw/2-1.6,y+21-rh,2.4,rh,"F");
+      doc.setFont("helvetica","normal"); doc.setFontSize(6.5); col(C.muted); doc.text(d.rain+"%",x0+cw/2-0.4,y+25,{align:"center"}); });
+    y+=30;
+    write("Grau hinterlegt: Stunden mit geöffnetem Markt. Blaue Balken: Regenwahrscheinlichkeit.",{size:8,color:C.muted});
+  } else write("Für diesen Tag gibt es noch keine Vorhersage (erst ca. 16 Tage vorher).",{size:10,color:C.muted});
+  y+=5;
+
+  // Ablauf
+  write("Ablauf",{size:13,style:"bold"}); y+=2;
+  const row=(t,title,lines,opts={})=>{
+    doc.setFontSize(10); const tw=CW-22;
+    const blocks=[[title,10,"bold",C.ink], ...lines.map(l=>[l[0],l[1]||9,l[2]||"normal",l[3]||C.muted,l[4]])];
+    let h=0; blocks.forEach(([txt,sz])=>{ doc.setFontSize(sz); h+=doc.splitTextToSize(txt,tw-4).length*sz*0.3528*1.35+0.6; });
+    ensure(h+3);
+    doc.setFont("helvetica","bold"); doc.setFontSize(10); col(C.ink); doc.text(t,M,y+3.6);
+    col(opts.dot||C.ink,"setFillColor"); doc.circle(M+17,y+2.4,1.6,"F");
+    const y0=y; let yy=y;
+    blocks.forEach(([txt,sz,sty,c,bar])=>{ doc.setFont("helvetica",sty); doc.setFontSize(sz); col(c);
+      const ls=doc.splitTextToSize(txt,tw-(bar?6:4)); const lh=ls.length*sz*0.3528*1.35;
+      if(bar){ col(C.red,"setFillColor"); doc.rect(M+22,yy+0.3,0.9,lh,"F"); }
+      doc.text(ls,M+22+(bar?3:0),yy+sz*0.3528); yy+=lh+0.6; });
+    col(C.line,"setDrawColor"); doc.setLineWidth(0.3); doc.line(M+17,y0+4.5,M+17,yy+1.5);
+    y=yy+2.5; };
+  row(fmt(w.wake),"Wecker",[[`${dur(state.prep)} zum Fertigmachen, Kaffee, Kleingeld einstecken`]],{dot:C.yel});
+  row(fmt(w.depart),`Losfahren in ${st.name}`,[[`ca. ${dur(w.toFirst)} bis zum ersten Markt (${ml})`]]);
+  w.b.visits.forEach((v,i)=>{
+    if(i>0) row(fmt(w.b.visits[i-1].leave),`Weiter, ca. ${dur(v.tr)}`,[[`mit ${ml}`]]);
+    const info=MI[v.m.id]||{finds:5,roof:0}, c=crowdAt(v.m,key,v.arr), lv=level(c), x=wxAt(key,v.arr), n=COUNTS[v.m.id+"|"+key]||0;
+    const early = v.arr<=v.m.open ? "pünktlich zur Öffnung" : `${dur(v.arr-v.m.open)} nach Öffnung`;
+    const lines=[[`${v.m.area} · offen ${v.m.o}–${v.m.c} · ${early} · stöbern bis ${fmt(v.leave)} · ${dur(v.m.close-v.leave)} Puffer bis Schluss`],
+      [`Fundchancen ${info.finds}/10 · Andrang bei Ankunft: ${lv[1]} · ${info.roof>=1?"Halle":info.roof>0?"teils überdacht":"draußen"}${x?` · Wetter: ${Math.round(x.t)}°, ${WXL[x.kind]}, Regen ${x.rain} %`:""}${n?` · ${n} angemeldet`:""}`],
+      [reason(v,i,w.b.visits,key,!!manualFor(key)),9,"italic",C.ink,true]];
+    row(fmt(v.arr),`${i+1}. ${v.m.name}`,lines,{dot:C.red});
+  });
+  row(fmt(w.b.visits[w.b.visits.length-1].leave),"Fertig",[[`${w.b.visits.length} Markt${w.b.visits.length>1?"e":""} geschafft`]]);
+  y+=3;
+
+  // Andrang-Balken
+  write("Erwarteter Andrang",{size:13,style:"bold"}); y+=2;
+  w.b.visits.forEach(v=>{ const m=v.m; ensure(16);
+    doc.setFont("helvetica","bold"); doc.setFontSize(9); col(C.ink); doc.text(m.name,M,y+3);
+    const pts=[]; for(let t=m.open;t<m.close;t+=30) pts.push(t);
+    const bx=M+70, bw=(CW-70)/pts.length;
+    pts.forEach((t,i)=>{ const val=crowdAt(m,key,t), hh=2+val*10, here=v.arr>=t&&v.arr<t+30;
+      col(here?C.ink:(LV[level(val)[2]]),"setFillColor"); doc.rect(bx+i*bw,y+12-hh,Math.max(0.8,bw-0.6),hh,"F"); });
+    doc.setFont("helvetica","normal"); doc.setFontSize(7); col(C.muted);
+    doc.text(m.o,bx,y+15.5); doc.text(m.c,bx+pts.length*bw,y+15.5,{align:"right"});
+    doc.text(`dunkel = deine Ankunft ${fmt(v.arr)}`,M,y+8);
+    y+=19; });
+  y+=2;
+
+  // Routenskizze
+  ensure(78); write("Routenskizze",{size:13,style:"bold"}); y+=2;
+  const ms=w.b.visits.map(v=>v.m), pts=[...Object.values(P),st];
+  const lats=pts.map(p=>p.lat), lngs=pts.map(p=>p.lng);
+  const minLa=Math.min(...lats)-0.006,maxLa=Math.max(...lats)+0.006,minLo=Math.min(...lngs)-0.012,maxLo=Math.max(...lngs)+0.012;
+  const bw2=CW, bh=62, X=l=>M+4+(l-minLo)/(maxLo-minLo)*(bw2-8), Y=l=>y+bh-4-(l-minLa)/(maxLa-minLa)*(bh-8);
+  col(C.paper,"setFillColor"); col(C.line,"setDrawColor"); doc.roundedRect(M,y,bw2,bh,2,2,"FD");
+  const route=[st,...ms]; doc.setLineDashPattern([1.5,1.2],0); col(C.ink,"setDrawColor"); doc.setLineWidth(0.5);
+  for(let i=1;i<route.length;i++) doc.line(X(route[i-1].lng),Y(route[i-1].lat),X(route[i].lng),Y(route[i].lat));
+  doc.setLineDashPattern([],0);
+  col(C.yel,"setFillColor"); doc.rect(X(st.lng)-1.8,Y(st.lat)-1.8,3.6,3.6,"FD");
+  doc.setFontSize(7.5); col(C.muted); doc.text("Start "+st.name,X(st.lng)+3,Y(st.lat)+4);
+  ms.forEach((m,i)=>{ col(C.red,"setFillColor"); doc.circle(X(m.lng),Y(m.lat),3,"F");
+    doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(255,255,255); doc.text(String(i+1),X(m.lng),Y(m.lat)+1.1,{align:"center"});
+    doc.setFont("helvetica","normal"); doc.setFontSize(7.5); col(C.ink); doc.text(m.area.split(" · ")[0],X(m.lng)+4,Y(m.lat)-2.5); });
+  y+=bh+3; write("Skizze nach Luftlinie, nicht maßstabsgetreu zu Straßen. Genaue Verbindungen: hvv-App.",{size:8,color:C.muted}); y+=5;
+
+  // Märkte im Detail
+  write("Die Märkte im Detail",{size:13,style:"bold"}); y+=2;
+  const inPlan=new Set(ms.map(m=>m.id));
+  [...ms, ...list.filter(m=>!inPlan.has(m.id))].forEach(m=>{ const info=MI[m.id]; if(!info) return;
+    write(`${m.name}${inPlan.has(m.id)?"":"  (nicht eingeplant)"}`,{size:10.5,style:"bold"});
+    write(`${m.area} · ${m.o}–${m.c} · Fundchancen ${info.finds}/10 · ${info.roof>=1?"Halle":info.roof>0?"teils überdacht":"draußen"} · ${info.tags.join(", ")}`,{size:8.5,color:C.muted});
+    write(info.blurb,{size:9});
+    write("Quellen: "+info.src.map(k=>`${SRC[k].t} (${SRC[k].u})`).join("; "),{size:7,color:C.muted});
+    write("Termin-Info: "+m.url,{size:7,color:C.muted});
+    y+=3; });
+
+  // Tipps
+  write("Gut zu wissen",{size:13,style:"bold"}); y+=1;
+  ["Kleingeld und kleine Scheine mitnehmen, dazu einen großen Beutel oder Rucksack.",
+   "Die besten Stücke gehen oft in der ersten Stunde weg. Gegen Ende lässt sich besser handeln.",
+   "Open-Air-Märkte können bei Sturm oder Starkregen ausfallen. Morgens kurz beim Veranstalter nachschauen."].forEach(t=>write("•  "+t,{size:9}));
+  y+=3;
+  write("Fundchancen und Andrang sind eine Einschätzung aus öffentlichen Berichten, Bewertungen, Wetter und Anmeldungen. Alle Angaben ohne Gewähr.",{size:7.5,color:C.muted});
+
+  // Fußzeile
+  const pages=doc.getNumberOfPages(), made=new Date().toLocaleString("de-DE",{dateStyle:"short",timeStyle:"short"});
+  for(let i=1;i<=pages;i++){ doc.setPage(i); doc.setFont("helvetica","normal"); doc.setFontSize(7.5); col(C.muted);
+    doc.text(`flo.hh.markt · 7zawa7.github.io/flo-hh-markt · erstellt ${made}`,M,291); doc.text(`Seite ${i} von ${pages}`,W-M,291,{align:"right"}); }
+  doc.save(`flohmarkt-plan-${key}.pdf`);
+}
+(function initPDF(){
+  const bar=document.getElementById("pdfbar"); if(!bar) return;
+  if(!CAN_PDF){ bar.hidden=true; return; }
+  const btn=document.getElementById("pdf-btn"), msg=document.getElementById("pdf-msg");
+  btn.onclick=async()=>{ btn.disabled=true; msg.textContent="PDF wird erstellt …";
+    try{ await exportPDF(); msg.textContent="Fertig, schau in deine Downloads."; }
+    catch(e){ msg.textContent="Das PDF konnte nicht erstellt werden. Bitte nochmal versuchen."; }
+    btn.disabled=false; };
+})();
+
 function renderAll(){ renderSettingsSum(); renderTabs(); renderCount(); renderHero(); renderWxDay(); renderPlan(); renderDays(); }
 (()=>{ let seen=false; try{ seen=!!localStorage.getItem("flohwecker"); }catch(e){} document.getElementById("settings").open=!seen; })();
 bind(); renderAll(); loadWeather(); loadCounts();
