@@ -49,3 +49,11 @@ Die Orte (Name, Stadtteil, Koordinaten, Stöberzeit) stehen darüber im Objekt `
 ## Anmeldung (Supabase)
 
 Die Anmeldung „Ich bin dabei“ läuft über Supabase. Die Zugangsdaten stehen in `SUPA` in `index.html`. Projekt: `flo-hh-markt` in der Supabase-Organisation enzolutions. Die Tabelle `signups` ist nur über die Funktionen `flohm_toggle` und `flohm_counts` erreichbar.
+
+## Rechtliches und Datenschutz
+
+- `impressum.html`: Impressum (enzolutions · Enzo Zawarty) mit Hinweis zum KI-Einsatz (Art. 50 KI-VO)
+- `datenschutz.html`: Datenschutzerklärung (GitHub Pages, Local Storage, Supabase, Open-Meteo, cdnjs für den PDF-Export)
+- `404.html`, `robots.txt`, `sitemap.xml`, `assets/og.png` (Vorschaubild beim Teilen), `assets/apple-touch-icon.png`
+- Die Überschriften-Schrift liegt unter `assets/fonts/`, es wird nichts von Google Fonts geladen.
+- Die Geräte-Kennung für „Ich bin dabei“ entsteht erst beim ersten Antippen. Anmeldungen für vergangene Tage löscht die Datenbank automatisch.

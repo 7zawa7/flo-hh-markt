@@ -6,10 +6,19 @@
 <title>flo.hh.markt</title>
 <meta name="description" content="Alle Hamburger Flohmärkte. Und wann du am besten wohin fährst.">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@500;700&display=swap">
+<link rel="preload" href="assets/fonts/bagel-fat-one.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="canonical" href="https://7zawa7.github.io/flo-hh-markt/">
+<meta name="theme-color" content="#12162a">
+<meta property="og:type" content="website">
+<meta property="og:title" content="flo.hh.markt · Der Flohmarkt-Tracker für Hamburg">
+<meta property="og:description" content="Alle Hamburger Flohmärkte. Und wann du am besten wohin fährst.">
+<meta property="og:url" content="https://7zawa7.github.io/flo-hh-markt/">
+<meta property="og:image" content="https://7zawa7.github.io/flo-hh-markt/assets/og.png">
+<meta property="og:locale" content="de_DE">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <style>
+@font-face{font-family:"Bagel Fat One";src:url("assets/fonts/bagel-fat-one.woff2") format("woff2");font-display:swap}
 /* Layout: ein Spaltenfluss – Sticker-Hero "Nächster Markt" → Tagesplan mit Wecker-Timeline + Routenskizze → Terminliste → Taktik-Tipps */
 :root{
   --bg:#e9ecef;          /* Pappkarton-Grau, leicht blau */
@@ -25,8 +34,8 @@
   --good:#1f8a5b;
   --warn:#b4570b;
   --font-display:"Bagel Fat One", "Arial Black", Impact, sans-serif;
-  --font-body:"Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --font-body:system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono:ui-monospace, "SF Mono", Menlo, monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#12162a;--paper:#1b2038;--ink:#eef0f7;--muted:#a3abc6;--line:#2f3656;
@@ -222,6 +231,8 @@ button,select{font:inherit;color:inherit}
 .tip{background:var(--paper);padding:14px 16px;border-top:4px solid var(--ink);border-radius:2px}
 .tip h3{margin:0 0 6px;font-size:1rem}
 .tip p{margin:0;color:var(--muted);font-size:.94rem;max-width:65ch}
+.legal{display:flex;flex-wrap:wrap;gap:6px 18px;font-weight:700}
+.legal a{color:var(--ink);text-underline-offset:3px}
 footer{font-size:.82rem;color:var(--muted);max-width:70ch;display:grid;gap:14px}
 /* Marke */
 .brand{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:6px 16px;padding-bottom:14px;border-bottom:2px solid var(--ink)}
@@ -344,8 +355,9 @@ footer{font-size:.82rem;color:var(--muted);max-width:70ch;display:grid;gap:14px}
   </section>
 
   <footer>
+    <nav class="legal" aria-label="Rechtliches"><a href="impressum.html">Impressum</a><a href="datenschutz.html">Datenschutz</a><a href="impressum.html#ki">Hinweis zu KI</a><a href="mailto:hello@enzolutions.de">hello@enzolutions.de</a></nav>
     <span class="logo small" aria-hidden="true">flo<span class="dot">.</span><svg class="hh" viewBox="0 0 124 116"><use href="#hh"/></svg><span class="dot">.</span>markt</span>
-    <span>Termine: hamburg.de Flohmarktkalender Oktober und November 2026, Stand 23.10.2026. Mit „regelmäßig“ markierte Termine stehen nicht im Kalender, die Flohschanze findet laut Stadt aber jeden Samstag statt, auch im Winter. Alle Angaben ohne Gewähr. Fahrzeiten sind grobe Schätzungen aus der Luftlinie, für genaue Verbindungen die hvv-App nutzen. Fundchancen und Andrang sind eine Einschätzung aus öffentlichen Berichten und Bewertungen (Stand 23.10.2026), dazu kommen Wetterbericht und Anmeldungen. Beiträge auf TikTok und Instagram lassen sich nicht automatisch auswerten und fließen deshalb nicht ein.</span>
+    <span>Termine: hamburg.de Flohmarktkalender Oktober und November 2026, Stand 23.10.2026. Mit „regelmäßig“ markierte Termine stehen nicht im Kalender, die Flohschanze findet laut Stadt aber jeden Samstag statt, auch im Winter. Alle Angaben ohne Gewähr. Fahrzeiten sind grobe Schätzungen aus der Luftlinie, für genaue Verbindungen die hvv-App nutzen. Fundchancen und Andrang sind eine Einschätzung aus öffentlichen Berichten und Bewertungen (Stand 23.10.2026), dazu kommen Wetterbericht und Anmeldungen. Beiträge auf TikTok und Instagram lassen sich nicht automatisch auswerten und fließen deshalb nicht ein. Diese Seite wurde mit Unterstützung von KI erstellt, die Einschätzungen sind automatisch berechnet. Ein Angebot von enzolutions · Enzo Zawarty.</span>
   </footer>
 </div>
 
@@ -685,17 +697,17 @@ function drawMap(ms, start){
   let s=`<rect x="0" y="0" width="320" height="240" fill="var(--paper)"/>`;
   // Elbe als Orientierung
   s+=`<path d="M0 ${Y(53.540)} C 90 ${Y(53.543)}, 170 ${Y(53.539)}, 320 ${Y(53.532)}" stroke="var(--line)" stroke-width="10" fill="none" stroke-linecap="round"/>`;
-  s+=`<text x="300" y="${Y(53.532)+20}" text-anchor="end" font-size="9" fill="var(--muted)" font-family="Atkinson Hyperlegible, sans-serif">Elbe</text>`;
+  s+=`<text x="300" y="${Y(53.532)+20}" text-anchor="end" font-size="9" fill="var(--muted)" font-family="system-ui, sans-serif">Elbe</text>`;
   const seen=new Set();
   Object.values(P).forEach(p=>{ const k=p.lat+","+p.lng; if(seen.has(k))return; seen.add(k);
     s+=`<circle cx="${X(p.lng)}" cy="${Y(p.lat)}" r="3" fill="var(--line)"/>`; });
   const route=[...(start?[start]:[]),...ms];
   if(route.length>1) s+=`<polyline points="${route.map(p=>X(p.lng)+","+Y(p.lat)).join(" ")}" fill="none" stroke="var(--ink)" stroke-width="2" stroke-dasharray="5 4"/>`;
-  if(start) s+=`<rect x="${X(start.lng)-5}" y="${Y(start.lat)-5}" width="10" height="10" fill="var(--tag)" stroke="var(--ink)" stroke-width="1.5"/><text x="${X(start.lng)+8}" y="${Y(start.lat)+14}" font-size="9" fill="var(--muted)" font-family="Atkinson Hyperlegible, sans-serif">Start</text>`;
+  if(start) s+=`<rect x="${X(start.lng)-5}" y="${Y(start.lat)-5}" width="10" height="10" fill="var(--tag)" stroke="var(--ink)" stroke-width="1.5"/><text x="${X(start.lng)+8}" y="${Y(start.lat)+14}" font-size="9" fill="var(--muted)" font-family="system-ui, sans-serif">Start</text>`;
   ms.forEach((m,i)=>{ const x=X(m.lng),y=Y(m.lat);
-    s+=`<circle cx="${x}" cy="${y}" r="11" fill="var(--sticker)" stroke="var(--ink)" stroke-width="1.5"/><text x="${x}" y="${y+4}" text-anchor="middle" font-size="11" font-weight="700" fill="var(--sticker-ink)" font-family="JetBrains Mono, monospace">${i+1}</text>`;
+    s+=`<circle cx="${x}" cy="${y}" r="11" fill="var(--sticker)" stroke="var(--ink)" stroke-width="1.5"/><text x="${x}" y="${y+4}" text-anchor="middle" font-size="11" font-weight="700" fill="var(--sticker-ink)" font-family="ui-monospace, monospace">${i+1}</text>`;
     const right = x<200;
-    s+=`<text x="${right?x+15:x-15}" y="${y-8}" text-anchor="${right?"start":"end"}" font-size="9.5" fill="var(--ink)" font-family="Atkinson Hyperlegible, sans-serif">${esc(m.area.split(" · ")[0])}</text>`; });
+    s+=`<text x="${right?x+15:x-15}" y="${y-8}" text-anchor="${right?"start":"end"}" font-size="9.5" fill="var(--ink)" font-family="system-ui, sans-serif">${esc(m.area.split(" · ")[0])}</text>`; });
   svg.innerHTML=s;
 }
 
@@ -847,7 +859,8 @@ function setManual(ids){ state.manual[state.day]=ids; save(); renderHero(); rend
 // ---- Anmeldung (Supabase) ----
 const SUPA = { url:"https://pkaommxmnoajryqywpyr.supabase.co", key:"sb_publishable_WnHgyZ42FeqpDhvofeA-9Q_AHznuuNx" };
 const MY = new Set((()=>{ try{ return JSON.parse(localStorage.getItem("flohm-joined")||"[]"); }catch(e){ return []; } })());
-const DEVICE = (()=>{ try{ let d=localStorage.getItem("flohm-device"); if(!d){ d=(crypto.randomUUID?crypto.randomUUID():String(Math.random()).slice(2)+Date.now()); localStorage.setItem("flohm-device",d); } return d; }catch(e){ return "anon-"+Math.random().toString(36).slice(2)+Date.now().toString(36); } })();
+let DEVICE=null;
+function getDevice(){ if(DEVICE) return DEVICE; try{ DEVICE=localStorage.getItem("flohm-device"); if(!DEVICE){ DEVICE=(crypto.randomUUID?crypto.randomUUID():String(Math.random()).slice(2)+Date.now()); localStorage.setItem("flohm-device",DEVICE); } }catch(e){ DEVICE="anon-"+Math.random().toString(36).slice(2)+Date.now().toString(36); } return DEVICE; }
 async function rpc(fn,body){
   const r=await fetch(`${SUPA.url}/rest/v1/rpc/${fn}`,{method:"POST",headers:{"apikey":SUPA.key,"Content-Type":"application/json"},body:JSON.stringify(body)});
   if(!r.ok) throw new Error(await r.text()); return r.json();
@@ -860,7 +873,7 @@ async function loadCounts(){
 document.getElementById("avail").addEventListener("click",async e=>{
   const b=e.target.closest("button[data-join]"); if(!b||!SUPA.url||!state.day) return;
   const id=b.dataset.join, k=id+"|"+state.day; b.disabled=true;
-  try{ const on=await rpc("flohm_toggle",{p_market:id,p_day:state.day,p_device:DEVICE});
+  try{ const on=await rpc("flohm_toggle",{p_market:id,p_day:state.day,p_device:getDevice()});
        if(on){ MY.add(k); COUNTS[k]=(COUNTS[k]||0)+1; } else { MY.delete(k); COUNTS[k]=Math.max(0,(COUNTS[k]||1)-1); }
        try{ localStorage.setItem("flohm-joined",JSON.stringify([...MY])); }catch(_){}
   }catch(err){ b.textContent="Hat nicht geklappt, nochmal tippen"; b.disabled=false; return; }

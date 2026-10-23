@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://7zawa7.github.io/flo-hh-markt/sitemap.xml
